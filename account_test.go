@@ -11,7 +11,7 @@ import (
 
 func TestSLIP10Compatibility_12words(t *testing.T) {
 	mnemonic := "response photo senior language wave property trip purse bench arena casual noodle"
-	account, err := solana.DeriveFromMnemonicBip44(mnemonic)
+	account, err := solana.DeriveAccountFromMnemonicBip44(mnemonic)
 	require.NoError(t, err)
 
 	{
@@ -30,7 +30,7 @@ func TestSLIP10Compatibility_12words(t *testing.T) {
 func TestSLIP10Compatibility_24words(t *testing.T) {
 	mnemonic := "diagram another jealous will cost ship goose blind elevator anxiety crazy cheese " +
 		"cherry jeans rhythm february fat broom tattoo artwork cluster damp maple scorpion"
-	account, err := solana.DeriveFromMnemonicBip44(mnemonic)
+	account, err := solana.DeriveAccountFromMnemonicBip44(mnemonic)
 	require.NoError(t, err)
 
 	{
@@ -52,7 +52,7 @@ func TestAccountFromMnemonicBip39_12Words(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, mnemonic)
 
-	account, err := solana.DeriveFromMnemonicBip39(mnemonic)
+	account, err := solana.DeriveAccountFromMnemonicBip39(mnemonic)
 	require.NoError(t, err)
 	require.NotNil(t, account)
 	require.NotNil(t, account.PrivateKey)
@@ -64,7 +64,7 @@ func TestAccountFromMnemonicBip44_12Words(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, mnemonic)
 
-	account, err := solana.DeriveFromMnemonicBip44(mnemonic)
+	account, err := solana.DeriveAccountFromMnemonicBip44(mnemonic)
 	require.NoError(t, err)
 	require.NotNil(t, account)
 	require.NotNil(t, account.PrivateKey)
@@ -76,7 +76,7 @@ func TestAccountFromMnemonicBip39_24Words(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, mnemonic)
 
-	account, err := solana.DeriveFromMnemonicBip39(mnemonic)
+	account, err := solana.DeriveAccountFromMnemonicBip39(mnemonic)
 	require.NoError(t, err)
 	require.NotNil(t, account)
 	require.NotNil(t, account.PrivateKey)
@@ -88,7 +88,7 @@ func TestAccountFromMnemonicBip44_24Words(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, mnemonic)
 
-	account, err := solana.DeriveFromMnemonicBip44(mnemonic)
+	account, err := solana.DeriveAccountFromMnemonicBip44(mnemonic)
 	require.NoError(t, err)
 	require.NotNil(t, account)
 	require.NotNil(t, account.PrivateKey)
@@ -98,10 +98,10 @@ func TestAccountFromMnemonicBip44_24Words(t *testing.T) {
 func TestAccountBase58(t *testing.T) {
 	acc := types.NewAccount()
 
-	base58 := solana.ToBase58(acc)
+	base58 := solana.AccountToBase58(acc)
 	require.NotEmpty(t, base58)
 
-	account2, err := solana.FromBase58(base58)
+	account2, err := solana.AccountFromBase58(base58)
 	require.NoError(t, err)
 	require.NotNil(t, account2)
 	require.NotNil(t, account2.PrivateKey)

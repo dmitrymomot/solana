@@ -33,15 +33,15 @@ func NewMnemonic(len MnemonicLength) (string, error) {
 	return mnemonic, nil
 }
 
-// DeriveFromMnemonicBip44 derives an Solana account from a mnemonic phrase
+// DeriveAccountFromMnemonicBip44 derives an Solana account from a mnemonic phrase
 // Compatible with BIP44 (phantom wallet)
-func DeriveFromMnemonicBip44(mnemonic string) (types.Account, error) {
+func DeriveAccountFromMnemonicBip44(mnemonic string) (types.Account, error) {
 	return deriveFromMnemonicBip44(mnemonic, 0)
 }
 
-// DeriveListFromMnemonicBip44 derives a list of Solana accounts from a mnemonic phrase
+// DeriveAccountsListFromMnemonicBip44 derives a list of Solana accounts from a mnemonic phrase
 // Compatible with BIP44 (phantom wallet)
-func DeriveListFromMnemonicBip44(mnemonic string, count int) ([]types.Account, error) {
+func DeriveAccountsListFromMnemonicBip44(mnemonic string, count int) ([]types.Account, error) {
 	accounts := make([]types.Account, count)
 
 	for i := 0; i < count; i++ {
@@ -56,9 +56,9 @@ func DeriveListFromMnemonicBip44(mnemonic string, count int) ([]types.Account, e
 	return accounts, nil
 }
 
-// DeriveFromMnemonicBip39 derives an Solana account from a mnemonic phrase
+// DeriveAccountFromMnemonicBip39 derives an Solana account from a mnemonic phrase
 // Compatible with BIP39 (solana cli tool)
-func DeriveFromMnemonicBip39(mnemonic string) (types.Account, error) {
+func DeriveAccountFromMnemonicBip39(mnemonic string) (types.Account, error) {
 	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
 		return types.Account{}, ErrCreateBip39SeedFromMnemonic
@@ -73,12 +73,12 @@ func DeriveFromMnemonicBip39(mnemonic string) (types.Account, error) {
 }
 
 // ToBase58 converts an Solana account to a base58 encoded string
-func ToBase58(a types.Account) string {
+func AccountToBase58(a types.Account) string {
 	return base58.Encode(a.PrivateKey)
 }
 
 // FromBase58 creates an Solana account from a base58 encoded string
-func FromBase58(s string) (types.Account, error) {
+func AccountFromBase58(s string) (types.Account, error) {
 	b, err := base58.Decode(s)
 	if err != nil {
 		return types.Account{}, ErrDecodeBase58ToAccount
