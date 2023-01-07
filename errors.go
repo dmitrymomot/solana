@@ -17,4 +17,6 @@ var (
 	ErrSerializeMessage            = errors.New("failed to serialize message")
 	ErrAddSignature                = errors.New("failed to add signature")
 	ErrSerializeTransaction        = errors.New("failed to serialize transaction")
+	ErrInvalidAirdropAmount        = errors.New("invalid airdrop amount; must be greater than 0 and less or equal 2000000000")
+	ErrRequestAirdrop              = errors.New("failed to request airdrop")
 )
