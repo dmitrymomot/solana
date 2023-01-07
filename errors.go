@@ -10,4 +10,5 @@ var (
 	ErrCreateAccountFromSeed       = errors.New("failed to create account from seed")
 	ErrDecodeBase58ToAccount       = errors.New("failed to decode base58 to account")
 	ErrDeriveKeyFromSeed           = errors.New("failed to derive key from seed")
+	ErrInvalidPublicKey            = errors.New("invalid base58 public key")
 )

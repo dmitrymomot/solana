@@ -3,7 +3,10 @@ package solana
 import (
 	"fmt"
 
+	"filippo.io/edwards25519"
 	"github.com/mr-tron/base58"
+	"github.com/pkg/errors"
+	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/pkg/hdwallet"
 	"github.com/portto/solana-go-sdk/types"
 	"github.com/tyler-smith/go-bip39"
@@ -85,6 +88,25 @@ func AccountFromBase58(s string) (types.Account, error) {
 	}
 
 	return types.AccountFromBytes(b)
+}
+
+// ValidateSolanaWalletAddr validates a Solana wallet address.
+// Returns an error if the address is invalid, nil otherwise.
+func ValidateSolanaWalletAddr(addr string) error {
+	d, err := base58.Decode(addr)
+	if err != nil {
+		return errors.Wrap(ErrInvalidPublicKey, err.Error())
+	}
+
+	if len(d) != common.PublicKeyLength {
+		return errors.Wrap(ErrInvalidPublicKey, "invalid public key length")
+	}
+
+	if _, err := new(edwards25519.Point).SetBytes(d); err != nil {
+		return errors.Wrap(ErrInvalidPublicKey, err.Error())
+	}
+
+	return nil
 }
 
 // deriveFromMnemonicBip44 derives an Solana account from a mnemonic phrase
