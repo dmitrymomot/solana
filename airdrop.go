@@ -2,6 +2,8 @@ package solana
 
 import (
 	"context"
+
+	"github.com/pkg/errors"
 )
 
 // RequestAirdrop sends a request to the solana network to airdrop SOL to the given account.
@@ -17,7 +19,7 @@ func (c *Client) RequestAirdrop(ctx context.Context, base58Addr string, amount u
 
 	tx, err := c.solana.RequestAirdrop(ctx, base58Addr, amount)
 	if err != nil {
-		return "", ErrRequestAirdrop
+		return "", errors.Wrap(ErrRequestAirdrop, UnwrapJsonRpError(err).Error())
 	}
 
 	return tx, nil
