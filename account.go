@@ -5,10 +5,10 @@ import (
 
 	"filippo.io/edwards25519"
 	"github.com/mr-tron/base58"
-	"github.com/pkg/errors"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/pkg/hdwallet"
 	"github.com/portto/solana-go-sdk/types"
+	"github.com/solplaydev/solana/utils"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -25,12 +25,12 @@ type MnemonicLength int
 func NewMnemonic(len MnemonicLength) (string, error) {
 	entropy, err := bip39.NewEntropy(int(len))
 	if err != nil {
-		return "", ErrCreateBip39Entropy
+		return "", utils.StackErrors(ErrNewMnemonic, ErrCreateBip39Entropy, err)
 	}
 
 	mnemonic, err := bip39.NewMnemonic(entropy)
 	if err != nil {
-		return "", ErrCreateBip39Mnemonic
+		return "", utils.StackErrors(ErrNewMnemonic, ErrCreateBip39Mnemonic, err)
 	}
 
 	return mnemonic, nil
@@ -39,7 +39,12 @@ func NewMnemonic(len MnemonicLength) (string, error) {
 // DeriveAccountFromMnemonicBip44 derives an Solana account from a mnemonic phrase
 // Compatible with BIP44 (phantom wallet)
 func DeriveAccountFromMnemonicBip44(mnemonic string) (types.Account, error) {
-	return deriveFromMnemonicBip44(mnemonic, 0)
+	acc, err := deriveFromMnemonicBip44(mnemonic, 0)
+	if err != nil {
+		return types.Account{}, utils.StackErrors(ErrDeriveAccountFromMnemonicBip44, err)
+	}
+
+	return acc, nil
 }
 
 // DeriveAccountsListFromMnemonicBip44 derives a list of Solana accounts from a mnemonic phrase
@@ -50,7 +55,7 @@ func DeriveAccountsListFromMnemonicBip44(mnemonic string, count int) ([]types.Ac
 	for i := 0; i < count; i++ {
 		account, err := deriveFromMnemonicBip44(mnemonic, i)
 		if err != nil {
-			return nil, err
+			return nil, utils.StackErrors(ErrDeriveAccountsListFromMnemonicBip44, err)
 		}
 
 		accounts[i] = account
@@ -64,12 +69,12 @@ func DeriveAccountsListFromMnemonicBip44(mnemonic string, count int) ([]types.Ac
 func DeriveAccountFromMnemonicBip39(mnemonic string) (types.Account, error) {
 	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
-		return types.Account{}, ErrCreateBip39SeedFromMnemonic
+		return types.Account{}, utils.StackErrors(ErrDeriveAccountFromMnemonicBip39, ErrCreateBip39SeedFromMnemonic, err)
 	}
 
 	account, err := types.AccountFromSeed(seed[:32])
 	if err != nil {
-		return types.Account{}, ErrCreateAccountFromSeed
+		return types.Account{}, utils.StackErrors(ErrDeriveAccountFromMnemonicBip39, ErrCreateAccountFromSeed, err)
 	}
 
 	return account, nil
@@ -84,7 +89,7 @@ func AccountToBase58(a types.Account) string {
 func AccountFromBase58(s string) (types.Account, error) {
 	b, err := base58.Decode(s)
 	if err != nil {
-		return types.Account{}, ErrDecodeBase58ToAccount
+		return types.Account{}, utils.StackErrors(ErrDecodeBase58ToAccount, err)
 	}
 
 	return types.AccountFromBytes(b)
@@ -95,15 +100,15 @@ func AccountFromBase58(s string) (types.Account, error) {
 func ValidateSolanaWalletAddr(addr string) error {
 	d, err := base58.Decode(addr)
 	if err != nil {
-		return errors.Wrap(ErrInvalidPublicKey, err.Error())
+		return utils.StackErrors(ErrInvalidPublicKey, err)
 	}
 
 	if len(d) != common.PublicKeyLength {
-		return errors.Wrap(ErrInvalidPublicKey, "invalid public key length")
+		return ErrInvalidPublicKeyLength
 	}
 
 	if _, err := new(edwards25519.Point).SetBytes(d); err != nil {
-		return errors.Wrap(ErrInvalidPublicKey, err.Error())
+		return utils.StackErrors(ErrInvalidPublicKey, err)
 	}
 
 	return nil
@@ -114,17 +119,17 @@ func ValidateSolanaWalletAddr(addr string) error {
 func deriveFromMnemonicBip44(mnemonic string, path int) (types.Account, error) {
 	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, "")
 	if err != nil {
-		return types.Account{}, ErrCreateBip39SeedFromMnemonic
+		return types.Account{}, utils.StackErrors(ErrCreateBip39SeedFromMnemonic, err)
 	}
 
 	derivedKey, err := hdwallet.Derived(fmt.Sprintf("m/44'/501'/%d'/0'", path), seed)
 	if err != nil {
-		return types.Account{}, ErrDeriveKeyFromSeed
+		return types.Account{}, utils.StackErrors(ErrDeriveKeyFromSeed, err)
 	}
 
 	account, err := types.AccountFromSeed(derivedKey.PrivateKey)
 	if err != nil {
-		return types.Account{}, ErrCreateAccountFromSeed
+		return types.Account{}, utils.StackErrors(ErrCreateAccountFromSeed, err)
 	}
 
 	return account, nil

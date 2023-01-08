@@ -2,6 +2,22 @@ package solana
 
 import "github.com/portto/solana-go-sdk/rpc"
 
+// Predefined Solana account sizes
+const (
+	AccountSize       uint64 = 165 // 165 bytes
+	FeeCalculatorSize uint64 = 8   // 8 bytes
+	NonceAccountSize  uint64 = 80  // 80 bytes
+	StakeAccountSize  uint64 = 200 // 200 bytes
+	TokenAccountSize  uint64 = 165 // 165 bytes
+	MintAccountSize   uint64 = 82  // 82 bytes
+)
+
+// Lookup table sizes
+const (
+	LookupTableMetaSize     uint64 = 56  // 56 bytes
+	LookupTableMaxAddresses uint   = 256 // 256 addresses
+)
+
 const (
 	// 1 SOL = 1e9 lamports
 	SOL uint64 = 1e9

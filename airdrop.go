@@ -3,7 +3,7 @@ package solana
 import (
 	"context"
 
-	"github.com/pkg/errors"
+	"github.com/solplaydev/solana/utils"
 )
 
 // RequestAirdrop sends a request to the solana network to airdrop SOL to the given account.
@@ -14,12 +14,12 @@ func (c *Client) RequestAirdrop(ctx context.Context, base58Addr string, amount u
 	}
 
 	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
-		return "", err
+		return "", utils.StackErrors(ErrRequestAirdrop, err)
 	}
 
 	tx, err := c.solana.RequestAirdrop(ctx, base58Addr, amount)
 	if err != nil {
-		return "", errors.Wrap(ErrRequestAirdrop, UnwrapJsonRpError(err).Error())
+		return "", utils.StackErrors(ErrRequestAirdrop, err)
 	}
 
 	return tx, nil

@@ -6,7 +6,6 @@ require (
 	filippo.io/edwards25519 v1.0.0-rc.1
 	github.com/fatih/color v1.13.0
 	github.com/mr-tron/base58 v1.2.0
-	github.com/pkg/errors v0.9.1
 	github.com/portto/solana-go-sdk v1.23.0
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.7.0

@@ -6,6 +6,7 @@ import (
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/system"
 	"github.com/portto/solana-go-sdk/types"
+	"github.com/solplaydev/solana/utils"
 )
 
 // CreateNonceAccountParams is the params for creating a nonce account.
@@ -22,7 +23,7 @@ type CreateNonceAccountParams struct {
 func (c *Client) CreateNonceAccount(ctx context.Context, params CreateNonceAccountParams) ([]byte, error) {
 	nonceAccountMinimumBalance, err := c.solana.GetMinimumBalanceForRentExemption(ctx, system.NonceAccountSize)
 	if err != nil {
-		return nil, ErrGetMinimumBalanceForRentExemption
+		return nil, utils.StackErrors(ErrCreateNonceAccount, ErrGetMinimumBalanceForRentExemption, err)
 	}
 
 	feePayerPublicKey := common.PublicKeyFromString(params.Base58FeePayerAddr)
@@ -46,7 +47,7 @@ func (c *Client) CreateNonceAccount(ctx context.Context, params CreateNonceAccou
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, utils.StackErrors(ErrCreateNonceAccount, err)
 	}
 
 	return txb, nil

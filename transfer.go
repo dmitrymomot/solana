@@ -7,6 +7,7 @@ import (
 	"github.com/portto/solana-go-sdk/program/memo"
 	"github.com/portto/solana-go-sdk/program/system"
 	"github.com/portto/solana-go-sdk/types"
+	"github.com/solplaydev/solana/utils"
 )
 
 // TransferSOLParams are the parameters for TransferSOL function.
@@ -21,13 +22,13 @@ type TransferSOLParams struct {
 // Returns the base64 encoded transaction blob or an error.
 func (c *Client) TransferSOL(ctx context.Context, params TransferSOLParams) ([]byte, error) {
 	if err := ValidateSolanaWalletAddr(params.Base58SourceAddr); err != nil {
-		return nil, err
+		return nil, utils.StackErrors(ErrTransferSOL, err)
 	}
 	if err := ValidateSolanaWalletAddr(params.Base58DestAddr); err != nil {
-		return nil, err
+		return nil, utils.StackErrors(ErrTransferSOL, err)
 	}
 	if params.Lamports == 0 {
-		return nil, ErrInvalidTransferAmount
+		return nil, utils.StackErrors(ErrTransferSOL, ErrInvalidTransferAmount)
 	}
 
 	fromPubKey := common.PublicKeyFromString(params.Base58SourceAddr)
@@ -53,7 +54,7 @@ func (c *Client) TransferSOL(ctx context.Context, params TransferSOLParams) ([]b
 		Instructions:       instr,
 	})
 	if err != nil {
-		return nil, err
+		return nil, utils.StackErrors(ErrTransferSOL, err)
 	}
 
 	return txb, nil

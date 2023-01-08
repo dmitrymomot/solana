@@ -4,18 +4,19 @@ import (
 	"context"
 
 	"github.com/portto/solana-go-sdk/common"
+	"github.com/solplaydev/solana/utils"
 )
 
 // GetSOLBalance returns the SOL balance of the given base58 encoded account address.
 // Returns the balance or an error.
 func (c *Client) GetSOLBalance(ctx context.Context, base58Addr string) (uint64, error) {
 	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
-		return 0, err
+		return 0, utils.StackErrors(ErrGetSolBalance, err)
 	}
 
 	balance, err := c.solana.GetBalance(ctx, base58Addr)
 	if err != nil {
-		return 0, ErrGetSolBalance
+		return 0, utils.StackErrors(ErrGetSolBalance, err)
 	}
 
 	return balance, nil
@@ -27,10 +28,10 @@ func (c *Client) GetSOLBalance(ctx context.Context, base58Addr string) (uint64, 
 // Returns the balance in lamports and token decimals, or an error.
 func (c *Client) GetSPLTokenBalance(ctx context.Context, base58Addr, base58MintAddr string) (uint64, uint8, error) {
 	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
-		return 0, 0, err
+		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, err)
 	}
 	if err := ValidateSolanaWalletAddr(base58MintAddr); err != nil {
-		return 0, 0, err
+		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, err)
 	}
 
 	ata, _, err := common.FindAssociatedTokenAddress(
@@ -38,12 +39,12 @@ func (c *Client) GetSPLTokenBalance(ctx context.Context, base58Addr, base58MintA
 		common.PublicKeyFromString(base58MintAddr),
 	)
 	if err != nil {
-		return 0, 0, ErrFindAssociatedTokenAddress
+		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, ErrFindAssociatedTokenAddress, err)
 	}
 
 	balance, decimals, err := c.solana.GetTokenAccountBalance(ctx, ata.ToBase58())
 	if err != nil {
-		return 0, 0, ErrGetSplTokenBalance
+		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, err)
 	}
 
 	return balance, decimals, nil
@@ -54,12 +55,12 @@ func (c *Client) GetSPLTokenBalance(ctx context.Context, base58Addr, base58MintA
 // Returns the balance in lamports and token decimals, or an error.
 func (c *Client) GetAtaBalance(ctx context.Context, base58Addr string) (uint64, uint8, error) {
 	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
-		return 0, 0, err
+		return 0, 0, utils.StackErrors(ErrGetAtaBalance, err)
 	}
 
 	balance, decimals, err := c.solana.GetTokenAccountBalance(ctx, base58Addr)
 	if err != nil {
-		return 0, 0, ErrGetSplTokenBalance
+		return 0, 0, utils.StackErrors(ErrGetAtaBalance, ErrGetSplTokenBalance, err)
 	}
 
 	return balance, decimals, nil
