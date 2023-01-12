@@ -7,16 +7,9 @@ import (
 
 	"github.com/portto/solana-go-sdk/types"
 	"github.com/solplaydev/solana"
+	"github.com/solplaydev/solana/tests/e2e"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-var (
-	senderAddr       = "FuQhSmAT6kAmmzCMiiYbzFcTQJFuu6raXAdCFibz4YPR"
-	senderPrivateKey = "4xgyc4d8SkRMK4BrdDnhk1Cb3fJBfevZP4Fueiga7wt3aDaDDtYSLJV8V4pY9rci9Qqyo9zwV6dBmV2G7nVYk9sV"
-
-	// recipientAddr       = "RjpQLUttBMdoQ4HKMygScEjkd6S69dZZC9T4W3Z3DKD"
-	recipientPrivateKey = "5f34yVBKf7VfcpgW3pD91UcYuMiU7MnAgtMNUooXECcMc2kEGwM2p4LsHFwqK61X2o9TjA5iUpSRYkyYUojmbCrj"
 )
 
 func TestRequestAirdrop(t *testing.T) {
@@ -24,21 +17,21 @@ func TestRequestAirdrop(t *testing.T) {
 	defer cancel()
 
 	// Create a new client
-	client := solana.New(solana.SetSolanaEndpoint(solanaDevnetRPCNode))
+	client := solana.New(solana.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
 
 	// Request airdrop
-	airdropSignature, err := client.RequestAirdrop(ctx, senderAddr, solana.SOL)
+	airdropSignature, err := client.RequestAirdrop(ctx, e2e.Wallet1Addr, solana.SOL)
 	require.NoError(t, err)
 	require.NotEmpty(t, airdropSignature)
 	t.Logf("Airdrop signature: %s", airdropSignature)
 }
 
 func TestTransaction(t *testing.T) {
-	senderAccount, err := types.AccountFromBase58(senderPrivateKey)
+	senderAccount, err := types.AccountFromBase58(e2e.Wallet1PrivateKey)
 	require.NoError(t, err)
 	require.NotEmpty(t, senderAccount)
 
-	recipientAccount, err := types.AccountFromBase58(recipientPrivateKey)
+	recipientAccount, err := types.AccountFromBase58(e2e.Wallet2PrivateKey)
 	require.NoError(t, err)
 	require.NotEmpty(t, recipientAccount)
 
@@ -46,7 +39,7 @@ func TestTransaction(t *testing.T) {
 	defer cancel()
 
 	// Create a new client
-	client := solana.New(solana.SetSolanaEndpoint(solanaDevnetRPCNode))
+	client := solana.New(solana.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
 
 	minAccountRent, err := client.GetMinimumBalanceForRentExemption(context.Background(), solana.AccountSize)
 	require.NoError(t, err)
@@ -68,7 +61,7 @@ func TestTransaction(t *testing.T) {
 
 		// Wait for transaction to be confirmed
 		t.Log("Waiting for airdrop transaction to be confirmed")
-		status, err := client.WaitForTransactionConfirmed(ctx, tx)
+		status, err := client.WaitForTransactionConfirmed(ctx, tx, 0)
 		require.NoError(t, err)
 		require.Equal(t, solana.TransactionStatusSuccess, status)
 
@@ -85,10 +78,10 @@ func TestTransaction(t *testing.T) {
 
 	// Create a new transaction
 	txb, err := client.TransferSOL(ctx, solana.TransferSOLParams{
-		Base58SourceAddr: senderAccount.PublicKey.ToBase58(),
-		Base58DestAddr:   recipientAccount.PublicKey.ToBase58(),
-		Lamports:         amount,
-		Memo:             "Test transaction " + time.Now().String(),
+		From:   senderAccount.PublicKey.ToBase58(),
+		To:     recipientAccount.PublicKey.ToBase58(),
+		Amount: amount,
+		Memo:   "Test transaction " + time.Now().String(),
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, txb)
@@ -106,7 +99,7 @@ func TestTransaction(t *testing.T) {
 
 	// Wait for transaction to be confirmed
 	t.Log("Waiting for transaction to be confirmed...")
-	status, err := client.WaitForTransactionConfirmed(ctx, txSignature)
+	status, err := client.WaitForTransactionConfirmed(ctx, txSignature, 0)
 	require.NoError(t, err)
 	require.Equal(t, solana.TransactionStatusSuccess, status)
 

@@ -1,6 +1,9 @@
 package solana
 
-import "github.com/portto/solana-go-sdk/rpc"
+import (
+	"github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
+	"github.com/portto/solana-go-sdk/rpc"
+)
 
 // Predefined Solana account sizes
 const (
@@ -24,6 +27,9 @@ const (
 
 	// SPL token default decimals
 	SPLTokenDefaultDecimals uint8 = 9
+
+	// SPL token default multiplier for decimals
+	SPLTokenDefaultMultiplier uint64 = 1e9
 
 	// Solana Devnet RPC URL
 	SolanaDevnetRPCURL = "https://api.devnet.solana.com"
@@ -68,5 +74,125 @@ func ParseTransactionStatus(s rpc.Commitment) TransactionStatus {
 		return TransactionStatusInProgress
 	default:
 		return TransactionStatusUnknown
+	}
+}
+
+// TokenUseMethod represents the use method of a token.
+type TokenUseMethod string
+
+// TokenUseMethod enum.
+const (
+	TokenUseMethodUnknown TokenUseMethod = "unknown"
+	TokenUseMethodBurn    TokenUseMethod = "burn"
+	TokenUseMethodSingle  TokenUseMethod = "single"
+	TokenUseMethodMulti   TokenUseMethod = "multiple"
+)
+
+// String returns the string representation of the token use method.
+func (m TokenUseMethod) String() string {
+	if !m.Valid() {
+		return TokenUseMethodUnknown.String()
+	}
+	return string(m)
+}
+
+// Valid returns true if the token use method is valid.
+func (m TokenUseMethod) Valid() bool {
+	return m == TokenUseMethodBurn || m == TokenUseMethodSingle || m == TokenUseMethodMulti
+}
+
+// ToMetadataUseMethod converts the token use method to token_metadata.UseMethod.
+func (m TokenUseMethod) ToMetadataUseMethod() token_metadata.UseMethod {
+	return StringToUseMethod(m.String())
+}
+
+// Cast token_metadata.UseMethod to string
+func UseMethodToString(m token_metadata.UseMethod) string {
+	switch m {
+	case token_metadata.Burn:
+		return TokenUseMethodBurn.String()
+	case token_metadata.Single:
+		return TokenUseMethodSingle.String()
+	case token_metadata.Multiple:
+		return TokenUseMethodMulti.String()
+	default:
+		return TokenUseMethodUnknown.String()
+	}
+}
+
+// Cast string to token_metadata.UseMethod
+func StringToUseMethod(m string) token_metadata.UseMethod {
+	switch m {
+	case TokenUseMethodBurn.String():
+		return token_metadata.Burn
+	case TokenUseMethodSingle.String():
+		return token_metadata.Single
+	case TokenUseMethodMulti.String():
+		return token_metadata.Multiple
+	default:
+		return token_metadata.Burn
+	}
+}
+
+// Predefined token editions
+const (
+	EditionUndefined                 string = "undefined"
+	EditionMasterEdition             string = "master_edition"
+	EditionPrintedEdition            string = "edition"
+	EditionReservationList           string = "reservation_list"
+	EditionMetadata                  string = "metadata"
+	EditionEditionMarker             string = "edition_marker"
+	EditionUseAuthorityRecord        string = "use_authority_record"
+	EditionCollectionAuthorityRecord string = "collection_authority_record"
+)
+
+// token_metadata.EditionKey to string
+func EditionKeyToString(k token_metadata.Key) string {
+	switch k {
+	case token_metadata.KeyUninitialized:
+		return EditionUndefined
+	case token_metadata.KeyEditionV1:
+		return EditionPrintedEdition
+	case token_metadata.KeyMasterEditionV1, token_metadata.KeyMasterEditionV2:
+		return EditionMasterEdition
+	case token_metadata.KeyReservationListV1:
+		return EditionReservationList
+	case token_metadata.KeyMetadataV1:
+		return EditionMetadata
+	case token_metadata.KeyReservationListV2:
+		return EditionReservationList
+	case token_metadata.KeyEditionMarker:
+		return EditionEditionMarker
+	case token_metadata.KeyUseAuthorityRecord:
+		return EditionUseAuthorityRecord
+	case token_metadata.KeyCollectionAuthorityRecord:
+		return EditionCollectionAuthorityRecord
+	default:
+		return EditionUndefined
+	}
+}
+
+// Token standards enum
+const (
+	TokenStandardUndefined          string = "undefined"
+	TokenStandardNonFungible        string = "non_fungible"
+	TokenStandardNonFungibleEdition string = "non_fungible_edition"
+	TokenStandardFungibleAsset      string = "fungible_asset"
+	TokenStandardFungible           string = "fungible"
+)
+
+// Cast token_metadata.TokenStandard to string
+func TokenStandardToString(ts token_metadata.TokenStandard) string {
+	switch ts {
+	case token_metadata.NonFungible:
+		return TokenStandardNonFungible
+	case token_metadata.NonFungibleEdition:
+		return TokenStandardNonFungibleEdition
+	case token_metadata.FungibleAsset:
+		return TokenStandardFungibleAsset
+	case token_metadata.Fungible:
+		return TokenStandardFungible
+	default:
+		return TokenStandardUndefined
 	}
 }

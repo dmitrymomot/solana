@@ -2,8 +2,8 @@ package utils
 
 import "encoding/json"
 
-// StructPrettyPrint returns a pretty-printed string representation of a struct.
-func StructPrettyPrint(s interface{}) string {
+// PrettyPrint returns a pretty-printed string representation of a struct or a map.
+func PrettyPrint(s interface{}) string {
 	b, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return ""

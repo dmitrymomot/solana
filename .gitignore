@@ -15,3 +15,4 @@
 # vendor/
 bin/
 tests/e2e/config.go
+tests/e2e/arweave*

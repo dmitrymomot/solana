@@ -20,10 +20,10 @@ type CreateNonceAccountParams struct {
 // base58FeePayerAddr is the base58 encoded fee payer address.
 // Returns the base64 encoded transaction, or an error.
 // !!! This transaction must be signed by both: the fee payer and the nonce account.
-func (c *Client) CreateNonceAccount(ctx context.Context, params CreateNonceAccountParams) ([]byte, error) {
+func (c *Client) CreateNonceAccount(ctx context.Context, params CreateNonceAccountParams) (string, error) {
 	nonceAccountMinimumBalance, err := c.solana.GetMinimumBalanceForRentExemption(ctx, system.NonceAccountSize)
 	if err != nil {
-		return nil, utils.StackErrors(ErrCreateNonceAccount, ErrGetMinimumBalanceForRentExemption, err)
+		return "", utils.StackErrors(ErrCreateNonceAccount, ErrGetMinimumBalanceForRentExemption, err)
 	}
 
 	feePayerPublicKey := common.PublicKeyFromString(params.Base58FeePayerAddr)
@@ -31,7 +31,7 @@ func (c *Client) CreateNonceAccount(ctx context.Context, params CreateNonceAccou
 	nonceAuthPublicKey := common.PublicKeyFromString(params.Base58NonceAuthAddr)
 
 	txb, err := c.NewTransaction(ctx, NewTransactionParams{
-		Base58FeePayerAddr: params.Base58FeePayerAddr,
+		FeePayer: params.Base58FeePayerAddr,
 		Instructions: []types.Instruction{
 			system.CreateAccount(system.CreateAccountParam{
 				From:     feePayerPublicKey,
@@ -47,7 +47,7 @@ func (c *Client) CreateNonceAccount(ctx context.Context, params CreateNonceAccou
 		},
 	})
 	if err != nil {
-		return nil, utils.StackErrors(ErrCreateNonceAccount, err)
+		return "", utils.StackErrors(ErrCreateNonceAccount, err)
 	}
 
 	return txb, nil

@@ -3,6 +3,7 @@ package solana
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -14,35 +15,37 @@ import (
 
 // NewTransactionParams is the params for NewTransaction function.
 type NewTransactionParams struct {
-	Base58FeePayerAddr string
-	Instructions       []types.Instruction
+	FeePayer     string              // base58 encoded fee payer public key
+	Instructions []types.Instruction // transaction instructions
+	Signers      []types.Account     // transaction signers
 }
 
 // NewTransaction creates a new transaction.
 // Returns the transaction or an error.
-func (c *Client) NewTransaction(ctx context.Context, params NewTransactionParams) ([]byte, error) {
+func (c *Client) NewTransaction(ctx context.Context, params NewTransactionParams) (string, error) {
 	latestBlockhash, err := c.solana.GetLatestBlockhash(ctx)
 	if err != nil {
-		return nil, utils.StackErrors(ErrGetLatestBlockhash, err)
+		return "", utils.StackErrors(ErrGetLatestBlockhash, err)
 	}
 
 	tx, err := types.NewTransaction(types.NewTransactionParam{
 		Message: types.NewMessage(types.NewMessageParam{
-			FeePayer:        common.PublicKeyFromString(params.Base58FeePayerAddr),
+			FeePayer:        common.PublicKeyFromString(params.FeePayer),
 			RecentBlockhash: latestBlockhash.Blockhash,
 			Instructions:    params.Instructions,
 		}),
+		Signers: params.Signers,
 	})
 	if err != nil {
-		return nil, utils.StackErrors(ErrNewTransaction, err)
+		return "", utils.StackErrors(ErrNewTransaction, err)
 	}
 
 	txb, err := tx.Serialize()
 	if err != nil {
-		return nil, utils.StackErrors(ErrSerializeTransaction, err)
+		return "", utils.StackErrors(ErrSerializeTransaction, err)
 	}
 
-	return txb, nil
+	return utils.BytesToBase64(txb), nil
 }
 
 // NewDurableTransactionParams are the parameters for NewDurableTransaction function.
@@ -58,10 +61,10 @@ type NewDurableTransactionParams struct {
 // base58DurableNonceAddr is the base58 encoded durable nonce address.
 // instructions is the transaction instructions.
 // Returns the serialized transaction or an error.
-func (c *Client) NewDurableTransaction(ctx context.Context, params NewDurableTransactionParams) ([]byte, error) {
+func (c *Client) NewDurableTransaction(ctx context.Context, params NewDurableTransactionParams) (string, error) {
 	nonce, err := c.solana.GetNonceFromNonceAccount(ctx, params.Base58DurableNonceAddr)
 	if err != nil {
-		return nil, utils.StackErrors(ErrGetNonceFromNonceAccount, err)
+		return "", utils.StackErrors(ErrGetNonceFromNonceAccount, err)
 	}
 
 	feePayerPublicKey := common.PublicKeyFromString(params.Base58FeePayerAddr)
@@ -87,21 +90,26 @@ func (c *Client) NewDurableTransaction(ctx context.Context, params NewDurableTra
 		}),
 	})
 	if err != nil {
-		return nil, utils.StackErrors(ErrNewTransaction, err)
+		return "", utils.StackErrors(ErrNewTransaction, err)
 	}
 
 	txb, err := tx.Serialize()
 	if err != nil {
-		return nil, utils.StackErrors(ErrSerializeTransaction, err)
+		return "", utils.StackErrors(ErrSerializeTransaction, err)
 	}
 
-	return txb, nil
+	return utils.BytesToBase64(txb), nil
 }
 
 // GetTransactionFee gets the fee for a transaction.
 // Returns the fee or error.
-func (c *Client) GetTransactionFee(ctx context.Context, txSource []byte) (uint64, error) {
-	tx, err := types.TransactionDeserialize(txSource)
+func (c *Client) GetTransactionFee(ctx context.Context, txSource string) (uint64, error) {
+	txb, err := utils.Base64ToBytes(txSource)
+	if err != nil {
+		return 0, utils.StackErrors(ErrGetTransactionFee, err)
+	}
+
+	tx, err := types.TransactionDeserialize(txb)
 	if err != nil {
 		return 0, utils.StackErrors(ErrGetTransactionFee, ErrDeserializeTransaction, err)
 	}
@@ -116,33 +124,43 @@ func (c *Client) GetTransactionFee(ctx context.Context, txSource []byte) (uint64
 
 // Sign transaction
 // returns the signed transaction or an error
-func (c *Client) SignTransaction(ctx context.Context, wallet types.Account, txSource []byte) ([]byte, error) {
-	tx, err := types.TransactionDeserialize(txSource)
+func (c *Client) SignTransaction(ctx context.Context, wallet types.Account, txSource string) (string, error) {
+	txb, err := utils.Base64ToBytes(txSource)
 	if err != nil {
-		return nil, utils.StackErrors(ErrSignTransaction, ErrDeserializeTransaction, err)
+		return "", utils.StackErrors(ErrGetTransactionFee, err)
+	}
+
+	tx, err := types.TransactionDeserialize(txb)
+	if err != nil {
+		return "", utils.StackErrors(ErrSignTransaction, ErrDeserializeTransaction, err)
 	}
 
 	msg, err := tx.Message.Serialize()
 	if err != nil {
-		return nil, utils.StackErrors(ErrSignTransaction, ErrSerializeMessage, err)
+		return "", utils.StackErrors(ErrSignTransaction, ErrSerializeMessage, err)
 	}
 
 	if err := tx.AddSignature(wallet.Sign(msg)); err != nil {
-		return nil, utils.StackErrors(ErrSignTransaction, ErrAddSignature, err)
+		return "", utils.StackErrors(ErrSignTransaction, ErrAddSignature, err)
 	}
 
 	result, err := tx.Serialize()
 	if err != nil {
-		return nil, utils.StackErrors(ErrSignTransaction, ErrSerializeTransaction, err)
+		return "", utils.StackErrors(ErrSignTransaction, ErrSerializeTransaction, err)
 	}
 
-	return result, nil
+	return utils.BytesToBase64(result), nil
 }
 
 // Send transaction
 // returns the transaction hash or an error
-func (c *Client) SendTransaction(ctx context.Context, txSource []byte) (string, error) {
-	tx, err := types.TransactionDeserialize(txSource)
+func (c *Client) SendTransaction(ctx context.Context, txSource string) (string, error) {
+	txb, err := utils.Base64ToBytes(txSource)
+	if err != nil {
+		return "", utils.StackErrors(ErrGetTransactionFee, err)
+	}
+
+	tx, err := types.TransactionDeserialize(txb)
 	if err != nil {
 		return "", utils.StackErrors(ErrSendTransaction, ErrDeserializeTransaction, err)
 	}
@@ -152,6 +170,7 @@ func (c *Client) SendTransaction(ctx context.Context, txSource []byte) (string, 
 		if strings.Contains(err.Error(), "without insufficient funds for rent") {
 			return "", utils.StackErrors(ErrSendTransaction, ErrWithoutInsufficientFound, err)
 		}
+		log.Fatalf("send transaction error: %#v", err)
 		return "", utils.StackErrors(ErrSendTransaction, err)
 	}
 
@@ -200,9 +219,15 @@ func (c *Client) GetMinimumBalanceForRentExemption(ctx context.Context, size uin
 
 // WaitForTransactionConfirmed waits for a transaction to be confirmed.
 // Returns the transaction status or an error.
-func (c *Client) WaitForTransactionConfirmed(ctx context.Context, txhash string) (TransactionStatus, error) {
+func (c *Client) WaitForTransactionConfirmed(ctx context.Context, txhash string, maxDuration time.Duration) (TransactionStatus, error) {
 	tick := time.NewTicker(5 * time.Second)
 	defer tick.Stop()
+
+	if maxDuration == 0 {
+		maxDuration = 5 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(ctx, maxDuration)
+	defer cancel()
 
 	for {
 		select {

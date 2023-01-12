@@ -80,6 +80,11 @@ func DeriveAccountFromMnemonicBip39(mnemonic string) (types.Account, error) {
 	return account, nil
 }
 
+// NewAccount creates a new Solana account
+func NewAccount() types.Account {
+	return types.NewAccount()
+}
+
 // ToBase58 converts an Solana account to a base58 encoded string
 func AccountToBase58(a types.Account) string {
 	return base58.Encode(a.PrivateKey)

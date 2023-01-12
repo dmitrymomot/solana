@@ -22,11 +22,11 @@ func (c *Client) GetSOLBalance(ctx context.Context, base58Addr string) (uint64, 
 	return balance, nil
 }
 
-// GetSPLTokenBalance returns the SPL token balance of the given base58 encoded account address and SPL token mint address.
+// GetTokenBalance returns the SPL token balance of the given base58 encoded account address and SPL token mint address.
 // base58Addr is the base58 encoded account address.
 // base58MintAddr is the base58 encoded SPL token mint address.
 // Returns the balance in lamports and token decimals, or an error.
-func (c *Client) GetSPLTokenBalance(ctx context.Context, base58Addr, base58MintAddr string) (uint64, uint8, error) {
+func (c *Client) GetTokenBalance(ctx context.Context, base58Addr, base58MintAddr string) (uint64, uint8, error) {
 	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
 		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, err)
 	}
