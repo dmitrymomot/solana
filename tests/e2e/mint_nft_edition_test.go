@@ -4,55 +4,27 @@ import (
 	"context"
 	"testing"
 
-	"github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/solplaydev/solana"
 	"github.com/solplaydev/solana/tests/e2e"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMintNFT_MintCommonNFT(t *testing.T) {
-	var (
-		tokenName   = "Test NFT"
-		tokenSymbol = "TSTn"
-		metadataUri = "https://www.arweave.net/jQ6ecVJtPZwaC-tsSYftEqaKsC8R3winHH2Z2hLxiBk?ext=json"
-	)
-
+func TestMintNftEdition(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Create a new client
 	client := solana.New(solana.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
 
-	// Mint a non-fungible token
-	mintAddr, tx, err := client.MintNonFungibleToken(ctx, solana.MintNonFungibleTokenParams{
+	mintAddr, tx, err := client.MintNonFungibleTokenEdition(ctx, solana.MintNonFungibleTokenEditionParams{
 		FeePayer: e2e.FeePayerAddr,
 		Owner:    e2e.Wallet1Addr,
-
-		Name:                 tokenName,
-		Symbol:               tokenSymbol,
-		MetadataURI:          metadataUri,
-		Collection:           e2e.CollectionAddr,
-		MaxSupply:            1000,
-		SellerFeeBasisPoints: 1000,
-		Creators: []solana.Creator{
-			{
-				Address: e2e.FeePayerAddr,
-				Share:   10,
-			},
-			{
-				Address: e2e.Wallet1Addr,
-				Share:   90,
-			},
-		},
-		Uses: &solana.Uses{
-			UseMethod: solana.TokenUseMethodBurn.String(),
-			Total:     10,
-			Remaining: 10,
-		},
+		Mint:     e2e.MasterEditionMintAddr,
+		// Edition:  2,
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, tx)
-	t.Logf("Mint address: %s", mintAddr)
+	t.Logf("NFT edition mint address: %s", mintAddr)
 
 	// Sign the transaction by the fee payer
 	feePayer, err := solana.AccountFromBase58(e2e.FeePayerPrivateKey)
@@ -86,12 +58,4 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 	t.Logf("Token balance: %d, decimals: %d", balance, deciamls)
 	require.EqualValues(t, 1, balance)
 	require.EqualValues(t, uint8(0), deciamls)
-
-	// Check token metadata
-	metadata, err := client.GetTokenMetadata(ctx, mintAddr)
-	require.NoError(t, err)
-	t.Logf("Token metadata: %+v", metadata)
-	require.EqualValues(t, tokenName, metadata.Data.Name)
-	require.EqualValues(t, tokenSymbol, metadata.Data.Symbol)
-	require.EqualValues(t, solana.TokenStandardToString(token_metadata.NonFungible), metadata.TokenStandard)
 }

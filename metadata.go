@@ -310,9 +310,16 @@ type (
 	}
 
 	Edition struct {
-		Key       string  `json:"key"`
-		Supply    uint64  `json:"supply"`
-		MaxSupply *uint64 `json:"max_supply"`
+		Type      string `json:"type,omitempty"`
+		Supply    uint64 `json:"supply,omitempty"`
+		MaxSupply uint64 `json:"max_supply,omitempty"`
+		Edition   uint64 `json:"edition,omitempty"`
+	}
+
+	EditionData struct {
+		Key     token_metadata.Key
+		Parent  common.PublicKey
+		Edition uint64
 	}
 
 	Collection struct {
@@ -379,7 +386,11 @@ func (c *Client) GetTokenMetadata(ctx context.Context, base58MintAddr string) (T
 		SellerFeeBasisPoints: metadata.Data.SellerFeeBasisPoints,
 	}
 
-	m.Edition, _ = c.GetMasterEditionInfo(ctx, base58MintAddr)
+	if m.TokenStandard == TokenStandardNonFungible {
+		m.Edition, _ = c.GetMasterEditionInfo(ctx, base58MintAddr)
+	} else if m.TokenStandard == TokenStandardNonFungibleEdition {
+		m.Edition, _ = c.GetEditionInfo(ctx, base58MintAddr)
+	}
 
 	m.Data, err = c.DownloadMetadata(ctx, metadata.Data.Uri)
 	if err != nil {
@@ -487,30 +498,77 @@ func (c *Client) GetMasterEditionInfo(ctx context.Context, base58MintAddr string
 		)
 	}
 
-	data, err := masterEditionDeserialize(masterEdition.Data)
-	if err != nil {
+	var edition token_metadata.MasterEditionV2
+	if err := borsh.Deserialize(&edition, masterEdition.Data); err != nil {
 		return nil, utils.StackErrors(
 			ErrGetMasterEditionInfo,
-			err,
-		)
-	}
-
-	return &Edition{
-		Key:       EditionKeyToString(data.Key),
-		Supply:    data.Supply,
-		MaxSupply: data.MaxSupply,
-	}, nil
-}
-
-func masterEditionDeserialize(data []byte) (token_metadata.MasterEditionV2, error) {
-	var masterEdition token_metadata.MasterEditionV2
-	err := borsh.Deserialize(&masterEdition, data)
-	if err != nil {
-		return token_metadata.MasterEditionV2{}, utils.StackErrors(
 			ErrMasterEditionDeserialize,
 			err,
 		)
 	}
 
-	return masterEdition, nil
+	return &Edition{
+		Type:      EditionKeyToString(edition.Key),
+		Supply:    edition.Supply,
+		MaxSupply: *edition.MaxSupply,
+	}, nil
+}
+
+func (c *Client) GetEditionInfo(ctx context.Context, base58MintAddr string) (*Edition, error) {
+	mint := common.PublicKeyFromString(base58MintAddr)
+	masterEditionPubKey, err := token_metadata.GetMasterEdition(mint)
+	if err != nil {
+		return nil, utils.StackErrors(
+			ErrGetEditionInfo,
+			err,
+		)
+	}
+
+	editionData, err := c.solana.GetAccountInfo(ctx, masterEditionPubKey.String())
+	if err != nil {
+		return nil, utils.StackErrors(
+			ErrGetEditionInfo,
+			err,
+		)
+	}
+
+	var edition EditionData
+	if err := borsh.Deserialize(&edition, editionData.Data); err != nil {
+		return nil, utils.StackErrors(
+			ErrGetEditionInfo,
+			ErrEditionInfoDeserialize,
+			err,
+		)
+	}
+
+	result := &Edition{
+		Type:    EditionKeyToString(edition.Key),
+		Edition: edition.Edition,
+	}
+
+	if edition.Key == token_metadata.KeyEditionV1 {
+		masterEdition, err := c.solana.GetAccountInfo(ctx, edition.Parent.ToBase58())
+		if err != nil {
+			return nil, utils.StackErrors(
+				ErrGetEditionInfo,
+				ErrGetMasterEditionInfo,
+				err,
+			)
+		}
+
+		var edition token_metadata.MasterEditionV2
+		if err := borsh.Deserialize(&edition, masterEdition.Data); err != nil {
+			return nil, utils.StackErrors(
+				ErrGetEditionInfo,
+				ErrGetMasterEditionInfo,
+				ErrMasterEditionDeserialize,
+				err,
+			)
+		}
+
+		result.Supply = edition.Supply
+		result.MaxSupply = *edition.MaxSupply
+	}
+
+	return result, nil
 }

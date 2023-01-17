@@ -2,6 +2,7 @@ package solana
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/solplaydev/solana/utils"
@@ -44,7 +45,11 @@ func (c *Client) GetTokenBalance(ctx context.Context, base58Addr, base58MintAddr
 
 	balance, decimals, err := c.solana.GetTokenAccountBalance(ctx, ata.ToBase58())
 	if err != nil {
-		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, err)
+		return 0, 0, utils.StackErrors(
+			ErrGetSplTokenBalance,
+			fmt.Errorf("failed to get token account balance for associated token account: %s", ata.ToBase58()),
+			err,
+		)
 	}
 
 	return balance, decimals, nil

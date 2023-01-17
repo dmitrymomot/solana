@@ -309,10 +309,216 @@ func (c *Client) MintNonFungibleToken(ctx context.Context, params MintNonFungibl
 	return result.Mint.PublicKey.ToBase58(), result.Tx, nil
 }
 
+// MintNonFungibleTokenEditionParams are the parameters for MintNonFungibleTokenEdition.
+type MintNonFungibleTokenEditionParams struct {
+	FeePayer string // required; base58 encoded address of the fee payer
+	Mint     string // required; base58 encoded address of the master edition
+	Owner    string // optional; base58 encoded address of the owner; default is fee payer
+	Edition  uint64 // optional; edition number
+}
+
+// Validate validates the parameters.
+func (params MintNonFungibleTokenEditionParams) Validate() error {
+	if params.FeePayer == "" || params.Mint == "" {
+		return utils.StackErrors(
+			ErrMissedRequiredParameters,
+			errors.New("fee payer public key and mint address are required"),
+		)
+	}
+
+	return nil
+}
+
+// MintNonFungibleTokenEdition mints a non-fungible token (NFT) edition.
+func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNonFungibleTokenEditionParams) (mintAddr, tx string, err error) {
+	if err := params.Validate(); err != nil {
+		return "", "", utils.StackErrors(ErrMintNonFungibleTokenEdition, err)
+	}
+
+	// If owner is not set, use fee payer as owner.
+	if params.Owner == "" {
+		params.Owner = params.FeePayer
+	}
+
+	// Function scoped variables.
+	var (
+		feePayerPublicKey common.PublicKey = common.PublicKeyFromString(params.FeePayer)
+		ownerPublicKey    common.PublicKey = common.PublicKeyFromString(params.Owner)
+
+		masterOwner            common.PublicKey = ownerPublicKey
+		masterOwnerAta         common.PublicKey
+		masterMintPublicKey    common.PublicKey = common.PublicKeyFromString(params.Mint)
+		masterMetaPublicKey    common.PublicKey
+		masterEditionPublicKey common.PublicKey
+
+		newMintOwner            common.PublicKey = ownerPublicKey
+		newMintOwnerAta         common.PublicKey
+		newMint                 types.Account = NewAccount()
+		newMintMetaPublicKey    common.PublicKey
+		newMintEditionPublicKey common.PublicKey
+		newMintEditionMark      common.PublicKey
+	)
+
+	// Get next edition number.
+	if params.Edition == 0 {
+		editionInfo, err := c.GetMasterEditionInfo(ctx, masterMintPublicKey.ToBase58())
+		if err != nil || editionInfo == nil {
+			return "", "", utils.StackErrors(
+				ErrMintNonFungibleTokenEdition,
+				err,
+			)
+		}
+		if editionInfo.Type == "" || editionInfo.Type != EditionMasterEdition {
+			return "", "", utils.StackErrors(
+				ErrMintNonFungibleTokenEdition,
+				ErrTokenIsNotMasterEdition,
+			)
+		}
+		if editionInfo.MaxSupply == 0 || editionInfo.Supply == editionInfo.MaxSupply {
+			return "", "", utils.StackErrors(
+				ErrMintNonFungibleTokenEdition,
+				ErrMaxSupplyReached,
+			)
+		}
+
+		params.Edition = editionInfo.Supply + 1
+	}
+
+	masterOwnerAta, _, err = common.FindAssociatedTokenAddress(masterOwner, masterMintPublicKey)
+	if err != nil {
+		return "", "", utils.StackErrors(
+			ErrMintNonFungibleTokenEdition,
+			ErrFindAssociatedTokenAddress,
+			err,
+		)
+	}
+
+	masterMetaPublicKey, err = token_metadata.GetTokenMetaPubkey(masterMintPublicKey)
+	if err != nil {
+		return "", "", utils.StackErrors(
+			ErrMintNonFungibleTokenEdition,
+			ErrGetTokenMetaPubkey,
+			err,
+		)
+	}
+
+	masterEditionPublicKey, err = token_metadata.GetMasterEdition(masterMintPublicKey)
+	if err != nil {
+		return "", "", utils.StackErrors(
+			ErrMintNonFungibleTokenEdition,
+			ErrGetMasterEdition,
+			err,
+		)
+	}
+
+	newMintOwnerAta, _, err = common.FindAssociatedTokenAddress(newMintOwner, newMint.PublicKey)
+	if err != nil {
+		return "", "", utils.StackErrors(
+			ErrMintNonFungibleTokenEdition,
+			ErrFindAssociatedTokenAddress,
+			err,
+		)
+	}
+
+	newMintMetaPublicKey, err = token_metadata.GetTokenMetaPubkey(newMint.PublicKey)
+	if err != nil {
+		return "", "", utils.StackErrors(
+			ErrMintNonFungibleTokenEdition,
+			ErrGetTokenMetaPubkey,
+			err,
+		)
+	}
+
+	newMintEditionPublicKey, err = token_metadata.GetMasterEdition(newMint.PublicKey)
+	if err != nil {
+		return "", "", utils.StackErrors(
+			ErrMintNonFungibleTokenEdition,
+			ErrGetMasterEdition,
+			err,
+		)
+	}
+
+	newMintEditionMark, err = token_metadata.GetEditionMark(masterMintPublicKey, params.Edition)
+	if err != nil {
+		return "", "", utils.StackErrors(
+			ErrMintNonFungibleTokenEdition,
+			ErrGetEditionMark,
+			err,
+		)
+	}
+
+	rentExemptionBalance, err := c.GetMinimumBalanceForRentExemption(ctx, MintAccountSize)
+	if err != nil {
+		return "", "", utils.StackErrors(ErrMintNonFungibleTokenEdition, err)
+	}
+
+	instructions := []types.Instruction{
+		system.CreateAccount(system.CreateAccountParam{
+			From:     feePayerPublicKey,
+			New:      newMint.PublicKey,
+			Owner:    common.TokenProgramID,
+			Lamports: rentExemptionBalance,
+			Space:    token.MintAccountSize,
+		}),
+		token.InitializeMint(token.InitializeMintParam{
+			Decimals:   0,
+			Mint:       newMint.PublicKey,
+			MintAuth:   newMintOwner,
+			FreezeAuth: utils.Pointer(newMintOwner),
+		}),
+		associated_token_account.CreateAssociatedTokenAccount(
+			associated_token_account.CreateAssociatedTokenAccountParam{
+				Funder:                 feePayerPublicKey,
+				Owner:                  newMintOwner,
+				Mint:                   newMint.PublicKey,
+				AssociatedTokenAccount: newMintOwnerAta,
+			},
+		),
+		token.MintTo(token.MintToParam{
+			Mint:   newMint.PublicKey,
+			Auth:   ownerPublicKey,
+			To:     newMintOwnerAta,
+			Amount: 1,
+		}),
+		token_metadata.MintNewEditionFromMasterEditionViaToken(
+			token_metadata.MintNewEditionFromMasterEditionViaTokeParam{
+				NewMetaData:                newMintMetaPublicKey,
+				NewEdition:                 newMintEditionPublicKey,
+				MasterEdition:              masterEditionPublicKey,
+				NewMint:                    newMint.PublicKey,
+				NewMintAuthority:           newMintOwner,
+				Payer:                      feePayerPublicKey,
+				TokenAccountOwner:          masterOwner,
+				TokenAccount:               masterOwnerAta,
+				NewMetadataUpdateAuthority: newMintOwner,
+				MasterMetadata:             masterMetaPublicKey,
+
+				EditionMark: newMintEditionMark,
+				Edition:     params.Edition,
+			},
+		),
+	}
+
+	txb, err := c.NewTransaction(ctx, NewTransactionParams{
+		FeePayer:     params.FeePayer,
+		Instructions: instructions,
+		Signers:      []types.Account{newMint},
+	})
+	if err != nil {
+		return "", "", utils.StackErrors(
+			ErrMintNonFungibleTokenEdition,
+			err,
+		)
+	}
+
+	return newMint.PublicKey.String(), txb, nil
+}
+
 type (
 	initMintTransactionParams struct {
 		FeePayer string
 		Owner    string
+		// MasterEditionMint string
 
 		TokenStandard *token_metadata.TokenStandard
 
@@ -345,11 +551,6 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 	}
 	ownerPubKey := common.PublicKeyFromString(params.Owner)
 	mint := NewAccount()
-
-	rentExemptionBalance, err := c.GetMinimumBalanceForRentExemption(ctx, MintAccountSize)
-	if err != nil {
-		return nil, utils.StackErrors(ErrMintFungibleToken, err)
-	}
 
 	ownerAta, _, err := common.FindAssociatedTokenAddress(ownerPubKey, mint.PublicKey)
 	if err != nil {
@@ -441,6 +642,11 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 	var freezeAuth *common.PublicKey
 	if *params.TokenStandard == token_metadata.NonFungible || *params.TokenStandard == token_metadata.NonFungibleEdition {
 		freezeAuth = utils.Pointer(ownerPubKey)
+	}
+
+	rentExemptionBalance, err := c.GetMinimumBalanceForRentExemption(ctx, MintAccountSize)
+	if err != nil {
+		return nil, utils.StackErrors(ErrMintFungibleToken, err)
 	}
 
 	instructions := []types.Instruction{
