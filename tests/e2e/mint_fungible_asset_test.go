@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/solplaydev/solana"
 	"github.com/solplaydev/solana/tests/e2e"
+	"github.com/solplaydev/solana/token_metadata"
 	"github.com/stretchr/testify/require"
 )
 
@@ -79,5 +79,5 @@ func TestMintFungibleAsset_MintFixedSupply(t *testing.T) {
 	t.Logf("Token metadata: %+v", metadata)
 	require.EqualValues(t, tokenName, metadata.Data.Name)
 	require.EqualValues(t, tokenSymbol, metadata.Data.Symbol)
-	require.EqualValues(t, solana.TokenStandardToString(token_metadata.FungibleAsset), metadata.TokenStandard)
+	require.EqualValues(t, token_metadata.TokenStandardFungibleAsset.String(), metadata.TokenStandard)
 }

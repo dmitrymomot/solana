@@ -256,7 +256,7 @@ func (params MintNonFungibleTokenParams) Validate() error {
 	}
 
 	if params.Uses != nil {
-		if TokenUseMethod(params.Uses.UseMethod) == TokenUseMethodUnknown {
+		if params.Uses.UseMethod == token_metadata.TokenUseMethodUnknown.String() {
 			return utils.StackErrors(
 				ErrInvalidParameter,
 				errors.New("unknown token use method"),
@@ -369,7 +369,7 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 				err,
 			)
 		}
-		if editionInfo.Type == "" || editionInfo.Type != EditionMasterEdition {
+		if editionInfo.Type == "" || editionInfo.Type != token_metadata.KeyMasterEdition.String() {
 			return "", "", utils.StackErrors(
 				ErrMintNonFungibleTokenEdition,
 				ErrTokenIsNotMasterEdition,

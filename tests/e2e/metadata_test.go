@@ -6,6 +6,7 @@ import (
 
 	"github.com/solplaydev/solana"
 	"github.com/solplaydev/solana/tests/e2e"
+	"github.com/solplaydev/solana/token_metadata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +32,7 @@ func TestGetTokenMetadata(t *testing.T) {
 			assert.NotEmpty(t, md.Data.Image)
 		}
 		assert.NotNil(t, md.Edition)
-		assert.EqualValues(t, md.Edition.Type, solana.EditionMasterEdition)
+		assert.EqualValues(t, md.Edition.Type, token_metadata.KeyMasterEdition.String())
 		assert.EqualValues(t, md.Edition.MaxSupply, uint64(1000))
 		assert.GreaterOrEqual(t, md.Edition.Supply, uint64(4))
 		assert.EqualValues(t, md.Edition.Edition, uint64(0))
@@ -51,7 +52,7 @@ func TestGetTokenMetadata(t *testing.T) {
 			assert.NotEmpty(t, md.Data.Image)
 		}
 		assert.NotNil(t, md.Edition)
-		assert.EqualValues(t, md.Edition.Type, solana.EditionPrintedEdition)
+		assert.EqualValues(t, md.Edition.Type, token_metadata.KeyPrintedEdition.String())
 		assert.EqualValues(t, md.Edition.MaxSupply, uint64(1000))
 		assert.GreaterOrEqual(t, md.Edition.Supply, uint64(4))
 		assert.EqualValues(t, md.Edition.Edition, uint64(2))

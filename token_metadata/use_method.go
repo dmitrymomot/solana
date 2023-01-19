@@ -16,7 +16,7 @@ const (
 // String returns the string representation of the token use method.
 func (m TokenUseMethod) String() string {
 	if !m.Valid() {
-		return TokenUseMethodUnknown.String()
+		return string(TokenUseMethodUnknown)
 	}
 	return string(m)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/portto/solana-go-sdk/common"
 	"github.com/solplaydev/solana"
 	"github.com/solplaydev/solana/tests/e2e"
 	"github.com/solplaydev/solana/token_metadata"
@@ -25,28 +24,20 @@ func TestMintFungibleToken_MintFixedSupply(t *testing.T) {
 	// Create a new client
 	client := solana.New(solana.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
 
-	// Build token metadata
-	mb := token_metadata.NewTokenMetadataInstructionBuilder()
-	mb.SetName(tokenName)
-	mb.SetSymbol(tokenSymbol)
-	mb.SetUri(metadataUri)
-	metaPubkey, metadataInstruction, err := mb.Build()
-	require.NoError(t, err)
-	require.NotNil(t, metadataInstruction)
-	require.True(t, metaPubkey != (common.PublicKey{}))
+	// Mint a fungible token
+	mintAddr, tx, err := client.InitMintFungibleToken(ctx, solana.InitMintFungibleTokenParams{
+		FeePayer:     e2e.FeePayerAddr,
+		Owner:        e2e.Wallet1Addr,
+		SupplyAmount: supplyAmount,
+		Decimals:     solana.SPLTokenDefaultDecimals,
+		FixedSupply:  true,
 
-	// Build mint transaction
-	b := solana.NewMintBuilder(client)
-	b.SetTokenStandard(token_metadata.TokenStandardFungible)
-	b.SetFeePayerBase58(e2e.FeePayerAddr)
-	b.SetSupplyAmount(supplyAmount)
-	b.SetDecimals(solana.SPLTokenDefaultDecimals)
-	b.SetFixedSupply(true)
-
-	mintAddr, tx, err := b.Build()
+		Name:        tokenName,
+		Symbol:      tokenSymbol,
+		MetadataURI: metadataUri,
+	})
 	require.NoError(t, err)
-	require.NotNil(t, tx)
-	require.NotEmpty(t, mintAddr)
+	require.NotEmpty(t, tx)
 	t.Logf("Mint address: %s", mintAddr)
 
 	// Sign the transaction by the fee payer
