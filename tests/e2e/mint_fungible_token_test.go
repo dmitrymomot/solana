@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
+	"github.com/portto/solana-go-sdk/common"
 	"github.com/solplaydev/solana"
 	"github.com/solplaydev/solana/tests/e2e"
+	"github.com/solplaydev/solana/token_metadata"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,20 +25,28 @@ func TestMintFungibleToken_MintFixedSupply(t *testing.T) {
 	// Create a new client
 	client := solana.New(solana.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
 
-	// Mint a fungible token
-	mintAddr, tx, err := client.InitMintFungibleToken(ctx, solana.InitMintFungibleTokenParams{
-		FeePayer:     e2e.FeePayerAddr,
-		Owner:        e2e.Wallet1Addr,
-		SupplyAmount: supplyAmount,
-		Decimals:     solana.SPLTokenDefaultDecimals,
-		FixedSupply:  true,
-
-		Name:        tokenName,
-		Symbol:      tokenSymbol,
-		MetadataURI: metadataUri,
-	})
+	// Build token metadata
+	mb := token_metadata.NewTokenMetadataInstructionBuilder()
+	mb.SetName(tokenName)
+	mb.SetSymbol(tokenSymbol)
+	mb.SetUri(metadataUri)
+	metaPubkey, metadataInstruction, err := mb.Build()
 	require.NoError(t, err)
-	require.NotEmpty(t, tx)
+	require.NotNil(t, metadataInstruction)
+	require.True(t, metaPubkey != (common.PublicKey{}))
+
+	// Build mint transaction
+	b := solana.NewMintBuilder(client)
+	b.SetTokenStandard(token_metadata.TokenStandardFungible)
+	b.SetFeePayerBase58(e2e.FeePayerAddr)
+	b.SetSupplyAmount(supplyAmount)
+	b.SetDecimals(solana.SPLTokenDefaultDecimals)
+	b.SetFixedSupply(true)
+
+	mintAddr, tx, err := b.Build()
+	require.NoError(t, err)
+	require.NotNil(t, tx)
+	require.NotEmpty(t, mintAddr)
 	t.Logf("Mint address: %s", mintAddr)
 
 	// Sign the transaction by the fee payer
@@ -79,5 +88,5 @@ func TestMintFungibleToken_MintFixedSupply(t *testing.T) {
 	t.Logf("Token metadata: %+v", metadata)
 	require.EqualValues(t, tokenName, metadata.Data.Name)
 	require.EqualValues(t, tokenSymbol, metadata.Data.Symbol)
-	require.EqualValues(t, solana.TokenStandardToString(token_metadata.Fungible), metadata.TokenStandard)
+	require.EqualValues(t, token_metadata.TokenStandardFungible, metadata.TokenStandard)
 }

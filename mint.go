@@ -6,10 +6,11 @@ import (
 
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/associated_token_account"
-	"github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
+	metaplex_token_metadata "github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/portto/solana-go-sdk/program/system"
 	"github.com/portto/solana-go-sdk/program/token"
 	"github.com/portto/solana-go-sdk/types"
+	"github.com/solplaydev/solana/token_metadata"
 	"github.com/solplaydev/solana/utils"
 )
 
@@ -84,7 +85,7 @@ func (c *Client) InitMintFungibleToken(ctx context.Context, params InitMintFungi
 	result, err := c.prepareInitMintTransaction(ctx, initMintTransactionParams{
 		FeePayer:      params.FeePayer,
 		Owner:         params.Owner,
-		TokenStandard: utils.Pointer(token_metadata.Fungible),
+		TokenStandard: utils.Pointer(token_metadata.TokenStandardFungible),
 		Decimals:      params.Decimals,
 		SupplyAmount:  params.SupplyAmount,
 		FixedSupply:   params.FixedSupply,
@@ -164,14 +165,14 @@ func (c *Client) InitMintFungibleAsset(ctx context.Context, params InitMintFungi
 	result, err := c.prepareInitMintTransaction(ctx, initMintTransactionParams{
 		FeePayer:      params.FeePayer,
 		Owner:         params.Owner,
-		TokenStandard: utils.Pointer(token_metadata.FungibleAsset),
+		TokenStandard: utils.Pointer(token_metadata.TokenStandardFungibleAsset),
 		Decimals:      0,
 		SupplyAmount:  params.SupplyAmount,
 		FixedSupply:   params.FixedSupply,
 		Name:          params.Name,
 		Symbol:        params.Symbol,
 		MetadataURI:   params.MetadataURI,
-		Collection:    &Collection{Key: params.Collection},
+		Collection:    &token_metadata.Collection{Key: params.Collection},
 	})
 	if err != nil {
 		return "", "", utils.StackErrors(
@@ -195,10 +196,10 @@ type MintNonFungibleTokenParams struct {
 	Collection  string // optional; base58 encoded address of the collection; can be set later
 
 	// Minting
-	MaxSupply            uint64    // optional; maximum amount of edition tokens can be minted from master edition; default is 0, then only one token will be minted.
-	SellerFeeBasisPoints uint16    // optional; fee that will be paid to the owner of the master edition when the token is sold; default is 0
-	Creators             []Creator // optional; creators of the token; default is fee payer with 100% share; fee payer must be in a creators list; total share must be 100.
-	Uses                 *Uses     // optional; uses of the token; default is unlimited
+	MaxSupply            uint64                   // optional; maximum amount of edition tokens can be minted from master edition; default is 0, then only one token will be minted.
+	SellerFeeBasisPoints uint16                   // optional; fee that will be paid to the owner of the master edition when the token is sold; default is 0
+	Creators             []token_metadata.Creator // optional; creators of the token; default is fee payer with 100% share; fee payer must be in a creators list; total share must be 100.
+	Uses                 *token_metadata.Uses     // optional; uses of the token; default is unlimited
 }
 
 // Validate validates the parameters.
@@ -275,7 +276,7 @@ func (c *Client) MintNonFungibleToken(ctx context.Context, params MintNonFungibl
 	}
 
 	if params.Creators == nil || len(params.Creators) == 0 {
-		params.Creators = []Creator{
+		params.Creators = []token_metadata.Creator{
 			{
 				Address:  params.FeePayer,
 				Share:    100,
@@ -287,14 +288,14 @@ func (c *Client) MintNonFungibleToken(ctx context.Context, params MintNonFungibl
 	result, err := c.prepareInitMintTransaction(ctx, initMintTransactionParams{
 		FeePayer:             params.FeePayer,
 		Owner:                params.Owner,
-		TokenStandard:        utils.Pointer(token_metadata.NonFungible),
+		TokenStandard:        utils.Pointer(token_metadata.TokenStandardNonFungible),
 		Decimals:             0,
 		SupplyAmount:         1,
 		MaxEditionSupply:     params.MaxSupply,
 		Name:                 params.Name,
 		Symbol:               params.Symbol,
 		MetadataURI:          params.MetadataURI,
-		Collection:           &Collection{Key: params.Collection},
+		Collection:           &token_metadata.Collection{Key: params.Collection},
 		SellerFeeBasisPoints: params.SellerFeeBasisPoints,
 		Creators:             &params.Creators,
 		Uses:                 params.Uses,
@@ -393,7 +394,7 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 		)
 	}
 
-	masterMetaPublicKey, err = token_metadata.GetTokenMetaPubkey(masterMintPublicKey)
+	masterMetaPublicKey, err = token_metadata.DeriveTokenMetadataPubkey(masterMintPublicKey)
 	if err != nil {
 		return "", "", utils.StackErrors(
 			ErrMintNonFungibleTokenEdition,
@@ -402,7 +403,7 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 		)
 	}
 
-	masterEditionPublicKey, err = token_metadata.GetMasterEdition(masterMintPublicKey)
+	masterEditionPublicKey, err = token_metadata.DeriveEditionPubkey(masterMintPublicKey)
 	if err != nil {
 		return "", "", utils.StackErrors(
 			ErrMintNonFungibleTokenEdition,
@@ -420,7 +421,7 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 		)
 	}
 
-	newMintMetaPublicKey, err = token_metadata.GetTokenMetaPubkey(newMint.PublicKey)
+	newMintMetaPublicKey, err = token_metadata.DeriveTokenMetadataPubkey(newMint.PublicKey)
 	if err != nil {
 		return "", "", utils.StackErrors(
 			ErrMintNonFungibleTokenEdition,
@@ -429,7 +430,7 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 		)
 	}
 
-	newMintEditionPublicKey, err = token_metadata.GetMasterEdition(newMint.PublicKey)
+	newMintEditionPublicKey, err = token_metadata.DeriveEditionPubkey(newMint.PublicKey)
 	if err != nil {
 		return "", "", utils.StackErrors(
 			ErrMintNonFungibleTokenEdition,
@@ -438,7 +439,7 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 		)
 	}
 
-	newMintEditionMark, err = token_metadata.GetEditionMark(masterMintPublicKey, params.Edition)
+	newMintEditionMark, err = token_metadata.DeriveEditionMarkerPubkey(masterMintPublicKey, params.Edition)
 	if err != nil {
 		return "", "", utils.StackErrors(
 			ErrMintNonFungibleTokenEdition,
@@ -480,8 +481,8 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 			To:     newMintOwnerAta,
 			Amount: 1,
 		}),
-		token_metadata.MintNewEditionFromMasterEditionViaToken(
-			token_metadata.MintNewEditionFromMasterEditionViaTokeParam{
+		metaplex_token_metadata.MintNewEditionFromMasterEditionViaToken(
+			metaplex_token_metadata.MintNewEditionFromMasterEditionViaTokeParam{
 				NewMetaData:                newMintMetaPublicKey,
 				NewEdition:                 newMintEditionPublicKey,
 				MasterEdition:              masterEditionPublicKey,
@@ -518,7 +519,6 @@ type (
 	initMintTransactionParams struct {
 		FeePayer string
 		Owner    string
-		// MasterEditionMint string
 
 		TokenStandard *token_metadata.TokenStandard
 
@@ -529,12 +529,12 @@ type (
 		Name        string
 		Symbol      string
 		MetadataURI string
-		Collection  *Collection
-		Uses        *Uses
+		Collection  *token_metadata.Collection
+		Uses        *token_metadata.Uses
 
 		MaxEditionSupply     uint64
 		SellerFeeBasisPoints uint16
-		Creators             *[]Creator
+		Creators             *[]token_metadata.Creator
 	}
 
 	initMintTransactionResult struct {
@@ -561,7 +561,7 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 		)
 	}
 
-	metaPubkey, err := token_metadata.GetTokenMetaPubkey(mint.PublicKey)
+	metaPubkey, err := metaplex_token_metadata.GetTokenMetaPubkey(mint.PublicKey)
 	if err != nil {
 		return nil, utils.StackErrors(
 			ErrMintFungibleToken,
@@ -575,17 +575,17 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 	}
 
 	var (
-		collection        *token_metadata.Collection
-		collectionDetails *token_metadata.CollectionDetails
+		collection        *metaplex_token_metadata.Collection
+		collectionDetails *metaplex_token_metadata.CollectionDetails
 	)
 	if params.Collection != nil {
-		collection = &token_metadata.Collection{
+		collection = &metaplex_token_metadata.Collection{
 			Key:      common.PublicKeyFromString(params.Collection.Key),
 			Verified: false,
 		}
 		if params.Collection.Size > 0 {
-			collectionDetails = &token_metadata.CollectionDetails{
-				V1: token_metadata.CollectionDetailsV1{
+			collectionDetails = &metaplex_token_metadata.CollectionDetails{
+				V1: metaplex_token_metadata.CollectionDetailsV1{
 					Size: params.Collection.Size,
 				},
 			}
@@ -593,22 +593,24 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 	}
 	_ = collectionDetails // TODO: add instruction to have ability create sized collections
 
-	var uses *token_metadata.Uses
+	var uses *metaplex_token_metadata.Uses
 	if params.Uses != nil {
-		uses = &token_metadata.Uses{
-			UseMethod: StringToUseMethod(params.Uses.UseMethod),
-			Remaining: params.Uses.Remaining,
-			Total:     params.Uses.Total,
+		if useMethod := token_metadata.TokenUseMethod(params.Uses.UseMethod); useMethod.Valid() {
+			uses = &metaplex_token_metadata.Uses{
+				UseMethod: useMethod.ToMetadataUseMethod(),
+				Remaining: params.Uses.Remaining,
+				Total:     params.Uses.Total,
+			}
 		}
 	}
 
-	var creators *[]token_metadata.Creator
+	var creators *[]metaplex_token_metadata.Creator
 	if params.Creators != nil && len(*params.Creators) > 0 {
-		creators = &[]token_metadata.Creator{}
+		creators = &[]metaplex_token_metadata.Creator{}
 		totalShare := uint8(0)
 		feePayerInCreators := false
 		for _, c := range *params.Creators {
-			*creators = append(*creators, token_metadata.Creator{
+			*creators = append(*creators, metaplex_token_metadata.Creator{
 				Address:  common.PublicKeyFromString(c.Address),
 				Share:    c.Share,
 				Verified: c.Address == params.Owner,
@@ -640,7 +642,7 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 	}
 
 	var freezeAuth *common.PublicKey
-	if *params.TokenStandard == token_metadata.NonFungible || *params.TokenStandard == token_metadata.NonFungibleEdition {
+	if *params.TokenStandard == token_metadata.TokenStandardNonFungible || *params.TokenStandard == token_metadata.TokenStandardNonFungibleEdition {
 		freezeAuth = utils.Pointer(ownerPubKey)
 	}
 
@@ -663,7 +665,7 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 			MintAuth:   ownerPubKey,
 			FreezeAuth: freezeAuth,
 		}),
-		token_metadata.CreateMetadataAccountV2(token_metadata.CreateMetadataAccountV2Param{
+		metaplex_token_metadata.CreateMetadataAccountV2(metaplex_token_metadata.CreateMetadataAccountV2Param{
 			Metadata:                metaPubkey,
 			Mint:                    mint.PublicKey,
 			MintAuthority:           ownerPubKey,
@@ -671,7 +673,7 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 			UpdateAuthority:         ownerPubKey,
 			UpdateAuthorityIsSigner: true,
 			IsMutable:               true,
-			Data: token_metadata.DataV2{
+			Data: metaplex_token_metadata.DataV2{
 				Name:                 params.Name,
 				Symbol:               params.Symbol,
 				Uri:                  params.MetadataURI,
@@ -705,7 +707,10 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 		)
 	}
 
-	if params.FixedSupply && params.SupplyAmount > 0 && *params.TokenStandard != token_metadata.NonFungibleEdition && *params.TokenStandard != token_metadata.NonFungible {
+	if params.FixedSupply && params.SupplyAmount > 0 &&
+		*params.TokenStandard != token_metadata.TokenStandardNonFungibleEdition &&
+		*params.TokenStandard != token_metadata.TokenStandardNonFungible {
+
 		instructions = append(instructions, token.SetAuthority(token.SetAuthorityParam{
 			Account:  mint.PublicKey,
 			AuthType: token.AuthorityTypeMintTokens,
@@ -715,8 +720,8 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 		}))
 	}
 
-	if *params.TokenStandard == token_metadata.NonFungible {
-		tokenMasterEditionPubkey, err := token_metadata.GetMasterEdition(mint.PublicKey)
+	if *params.TokenStandard == token_metadata.TokenStandardNonFungible {
+		tokenMasterEditionPubkey, err := metaplex_token_metadata.GetMasterEdition(mint.PublicKey)
 		if err != nil {
 			return nil, utils.StackErrors(
 				ErrGetMasterEditionPubKey,
@@ -724,8 +729,8 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 			)
 		}
 
-		instructions = append(instructions, token_metadata.CreateMasterEditionV3(
-			token_metadata.CreateMasterEditionParam{
+		instructions = append(instructions, metaplex_token_metadata.CreateMasterEditionV3(
+			metaplex_token_metadata.CreateMasterEditionParam{
 				Edition:         tokenMasterEditionPubkey,
 				Mint:            mint.PublicKey,
 				UpdateAuthority: ownerPubKey,

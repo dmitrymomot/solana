@@ -4,17 +4,19 @@ import (
 	"context"
 	"testing"
 
+	"github.com/portto/solana-go-sdk/common"
 	"github.com/solplaydev/solana"
 	"github.com/solplaydev/solana/tests/e2e"
 	"github.com/solplaydev/solana/token_metadata"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMintNFT_MintCommonNFT(t *testing.T) {
+func TestMintBuilder_FungibleToken(t *testing.T) {
 	var (
-		tokenName   = "Test NFT"
-		tokenSymbol = "TSTn"
-		metadataUri = "https://www.arweave.net/jQ6ecVJtPZwaC-tsSYftEqaKsC8R3winHH2Z2hLxiBk?ext=json"
+		tokenName    = "Test Token"
+		tokenSymbol  = "TSTt"
+		metadataUri  = "https://www.arweave.net/QR1PsBgIbiYoKgGff5Jq2U8QavHChRjBki8XRJ-06mI?ext=json"
+		supplyAmount = 1000000 * solana.SPLTokenDefaultMultiplier
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -23,36 +25,37 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 	// Create a new client
 	client := solana.New(solana.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
 
-	// Mint a non-fungible token
-	mintAddr, tx, err := client.MintNonFungibleToken(ctx, solana.MintNonFungibleTokenParams{
-		FeePayer: e2e.FeePayerAddr,
-		Owner:    e2e.Wallet1Addr,
+	// Token mint account
+	mint := solana.NewAccount()
 
-		Name:                 tokenName,
-		Symbol:               tokenSymbol,
-		MetadataURI:          metadataUri,
-		Collection:           e2e.CollectionAddr,
-		MaxSupply:            1000,
-		SellerFeeBasisPoints: 1000,
-		Creators: []token_metadata.Creator{
-			{
-				Address: e2e.FeePayerAddr,
-				Share:   10,
-			},
-			{
-				Address: e2e.Wallet1Addr,
-				Share:   90,
-			},
-		},
-		Uses: &token_metadata.Uses{
-			UseMethod: token_metadata.TokenUseMethodBurn.String(),
-			Total:     10,
-			Remaining: 10,
-		},
-	})
+	// Build token metadata
+	metaPubkey, metadataInstruction, err := token_metadata.NewTokenMetadataInstructionBuilder().
+		SetMint(mint.PublicKey).
+		SetPayerBase58(e2e.FeePayerAddr).
+		SetName(tokenName).
+		SetSymbol(tokenSymbol).
+		SetUri(metadataUri).
+		Build()
 	require.NoError(t, err)
-	require.NotEmpty(t, tx)
+	require.NotNil(t, metadataInstruction)
+	require.True(t, metaPubkey != (common.PublicKey{}))
+
+	// Build mint transaction
+	mintAddr, tx, err := solana.NewMintBuilder(client).
+		SetMint(mint).
+		SetMetadataInstruction(&metadataInstruction).
+		SetTokenStandard(token_metadata.TokenStandardFungible).
+		SetFeePayerBase58(e2e.FeePayerAddr).
+		SetOwnerBase58(e2e.Wallet1Addr).
+		SetSupplyAmount(supplyAmount).
+		SetDecimals(solana.SPLTokenDefaultDecimals).
+		SetFixedSupply(true).
+		Build()
+	require.NoError(t, err)
+	require.NotNil(t, tx)
+	require.NotEmpty(t, mintAddr)
 	t.Logf("Mint address: %s", mintAddr)
+	require.EqualValues(t, mintAddr, mint.PublicKey.ToBase58())
 
 	// Sign the transaction by the fee payer
 	feePayer, err := solana.AccountFromBase58(e2e.FeePayerPrivateKey)
@@ -71,8 +74,8 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 	// Send the transaction
 	txHash, err := client.SendTransaction(ctx, tx)
 	require.NoError(t, err)
-	require.NotEmpty(t, txHash)
 	t.Logf("Transaction hash: %s", txHash)
+	require.NotEmpty(t, txHash)
 
 	// Wait for the transaction to be confirmed
 	txInfo, err := client.WaitForTransactionConfirmed(ctx, txHash, 0)
@@ -84,8 +87,8 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 	balance, deciamls, err := client.GetTokenBalance(ctx, e2e.Wallet1Addr, mintAddr)
 	require.NoError(t, err)
 	t.Logf("Token balance: %d, decimals: %d", balance, deciamls)
-	require.EqualValues(t, 1, balance)
-	require.EqualValues(t, uint8(0), deciamls)
+	require.EqualValues(t, supplyAmount, balance)
+	require.EqualValues(t, solana.SPLTokenDefaultDecimals, deciamls)
 
 	// Check token metadata
 	metadata, err := client.GetTokenMetadata(ctx, mintAddr)
@@ -93,5 +96,5 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 	t.Logf("Token metadata: %+v", metadata)
 	require.EqualValues(t, tokenName, metadata.Data.Name)
 	require.EqualValues(t, tokenSymbol, metadata.Data.Symbol)
-	require.EqualValues(t, token_metadata.TokenStandardNonFungible.String(), metadata.TokenStandard)
+	require.EqualValues(t, token_metadata.TokenStandardFungible, metadata.TokenStandard)
 }
