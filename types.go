@@ -2,6 +2,7 @@ package solana
 
 import (
 	"github.com/portto/solana-go-sdk/rpc"
+	"github.com/solplaydev/solana/utils"
 )
 
 // Predefined Solana account sizes
@@ -73,5 +74,24 @@ func ParseTransactionStatus(s rpc.Commitment) TransactionStatus {
 		return TransactionStatusInProgress
 	default:
 		return TransactionStatusUnknown
+	}
+}
+
+// TokenAmount represents the amount of a token.
+type TokenAmount struct {
+	Amount         uint64  `json:"amount"`                     // amount in token lamports
+	Decimals       uint8   `json:"decimals,omitempty"`         // number of decimals for the token; max 9
+	UIAmount       float64 `json:"ui_amount,omitempty"`        // amount in token units, e.g. 1 SOL
+	UIAmountString string  `json:"ui_amount_string,omitempty"` // amount in token units as a string, e.g. "1.000000000"
+}
+
+// TokenAmountFromLamports converts the given lamports to a token amount.
+func NewTokenAmountFromLamports(lamports uint64, decimals uint8) TokenAmount {
+	uiAmount := utils.AmountToFloat64(lamports, decimals)
+	return TokenAmount{
+		Amount:         lamports,
+		Decimals:       decimals,
+		UIAmount:       uiAmount,
+		UIAmountString: utils.Float64ToString(uiAmount),
 	}
 }

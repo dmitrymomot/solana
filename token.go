@@ -57,11 +57,11 @@ func (c *Client) GetMintInfo(ctx context.Context, base58MintAddr string) (token.
 // This is a wrapper around the GetTokenSupply function from the solana-go-sdk.
 // base58MintAddr is the base58 encoded address of the token mint.
 // The function returns the token supply and decimals or an error.
-func (c *Client) GetTokenSupply(ctx context.Context, base58MintAddr string) (uint64, uint8, error) {
-	supply, decimals, err := c.solana.GetTokenSupply(ctx, base58MintAddr)
+func (c *Client) GetTokenSupply(ctx context.Context, base58MintAddr string) (TokenAmount, error) {
+	result, err := c.solana.GetTokenSupply(ctx, base58MintAddr)
 	if err != nil {
-		return 0, 0, utils.StackErrors(ErrGetTokenSupply, err)
+		return TokenAmount{}, utils.StackErrors(ErrGetTokenSupply, err)
 	}
 
-	return supply, decimals, nil
+	return NewTokenAmountFromLamports(result.Amount, result.Decimals), nil
 }
