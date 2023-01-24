@@ -2,7 +2,6 @@ package solana
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/solplaydev/solana/utils"
@@ -27,12 +26,12 @@ func (c *Client) GetSOLBalance(ctx context.Context, base58Addr string) (uint64, 
 // base58Addr is the base58 encoded account address.
 // base58MintAddr is the base58 encoded SPL token mint address.
 // Returns the balance in lamports and token decimals, or an error.
-func (c *Client) GetTokenBalance(ctx context.Context, base58Addr, base58MintAddr string) (uint64, uint8, error) {
+func (c *Client) GetTokenBalance(ctx context.Context, base58Addr, base58MintAddr string) (TokenAmount, error) {
 	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
-		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, err)
+		return TokenAmount{}, utils.StackErrors(ErrGetSplTokenBalance, err)
 	}
 	if err := ValidateSolanaWalletAddr(base58MintAddr); err != nil {
-		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, err)
+		return TokenAmount{}, utils.StackErrors(ErrGetSplTokenBalance, err)
 	}
 
 	ata, _, err := common.FindAssociatedTokenAddress(
@@ -40,33 +39,24 @@ func (c *Client) GetTokenBalance(ctx context.Context, base58Addr, base58MintAddr
 		common.PublicKeyFromString(base58MintAddr),
 	)
 	if err != nil {
-		return 0, 0, utils.StackErrors(ErrGetSplTokenBalance, ErrFindAssociatedTokenAddress, err)
+		return TokenAmount{}, utils.StackErrors(ErrGetSplTokenBalance, ErrFindAssociatedTokenAddress, err)
 	}
 
-	balance, decimals, err := c.solana.GetTokenAccountBalance(ctx, ata.ToBase58())
-	if err != nil {
-		return 0, 0, utils.StackErrors(
-			ErrGetSplTokenBalance,
-			fmt.Errorf("failed to get token account balance for associated token account: %s", ata.ToBase58()),
-			err,
-		)
-	}
-
-	return balance, decimals, nil
+	return c.GetAtaBalance(ctx, ata.String())
 }
 
 // GetAtaBalance returns the SPL token balance of the given base58 encoded associated token account address.
 // base58Addr is the base58 encoded associated token account address.
 // Returns the balance in lamports and token decimals, or an error.
-func (c *Client) GetAtaBalance(ctx context.Context, base58Addr string) (uint64, uint8, error) {
+func (c *Client) GetAtaBalance(ctx context.Context, base58Addr string) (TokenAmount, error) {
 	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
-		return 0, 0, utils.StackErrors(ErrGetAtaBalance, err)
+		return TokenAmount{}, utils.StackErrors(ErrGetAtaBalance, err)
 	}
 
-	balance, decimals, err := c.solana.GetTokenAccountBalance(ctx, base58Addr)
+	balance, err := c.solana.GetTokenAccountBalance(ctx, base58Addr)
 	if err != nil {
-		return 0, 0, utils.StackErrors(ErrGetAtaBalance, ErrGetSplTokenBalance, err)
+		return TokenAmount{}, utils.StackErrors(ErrGetAtaBalance, ErrGetSplTokenBalance, err)
 	}
 
-	return balance, decimals, nil
+	return NewTokenAmountFromLamports(balance.Amount, balance.Decimals), nil
 }
