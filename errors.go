@@ -69,4 +69,7 @@ var (
 	ErrMaxSupplyReached                    = errors.New("max edition supply is already printed")
 	ErrTokenIsNotMasterEdition             = errors.New("token is not master edition")
 	ErrEditionInfoDeserialize              = errors.New("failed to deserialize edition info")
+	ErrVerifyCreator                       = errors.New("failed to verify creator")
+	ErrUpdateMetadata                      = errors.New("failed to update token metadata")
+	ErrSetTokenStandard                    = errors.New("failed to set token standard")
 )
