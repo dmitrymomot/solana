@@ -109,3 +109,55 @@ func TestAmountToUint64(t *testing.T) {
 		})
 	}
 }
+
+func TestAmountToString(t *testing.T) {
+	type args struct {
+		amount   uint64
+		decimals uint8
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "1 with decimals 0",
+			args: args{
+				amount:   1,
+				decimals: 0,
+			},
+			want: "1",
+		},
+		{
+			name: "100 with decimals 3",
+			args: args{
+				amount:   100000,
+				decimals: 3,
+			},
+			want: "100",
+		},
+		{
+			name: "1000 with decimals 9",
+			args: args{
+				amount:   1000000000000,
+				decimals: 9,
+			},
+			want: "1000",
+		},
+		{
+			name: "99999.999999999 with decimals 9",
+			args: args{
+				amount:   99999999999999,
+				decimals: 9,
+			},
+			want: "99999.999999999",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := utils.AmountToString(tt.args.amount, tt.args.decimals); got != tt.want {
+				t.Errorf("AmountToString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

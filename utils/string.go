@@ -11,3 +11,8 @@ func TrimStringBetween(str, start, end string) string {
 	}
 	return strings.TrimSpace(str[:indx1] + str[indx2+len(end):])
 }
+
+// TrimRightZeros trims trailing zeros from string.
+func TrimRightZeros(str string) string {
+	return strings.TrimRight(str, "0")
+}
