@@ -49,10 +49,6 @@ func (c *Client) GetTokenBalance(ctx context.Context, base58Addr, base58MintAddr
 // base58Addr is the base58 encoded associated token account address.
 // Returns the balance in lamports and token decimals, or an error.
 func (c *Client) GetAtaBalance(ctx context.Context, base58Addr string) (TokenAmount, error) {
-	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
-		return TokenAmount{}, utils.StackErrors(ErrGetAtaBalance, err)
-	}
-
 	balance, err := c.solana.GetTokenAccountBalance(ctx, base58Addr)
 	if err != nil {
 		return TokenAmount{}, utils.StackErrors(ErrGetAtaBalance, ErrGetSplTokenBalance, err)

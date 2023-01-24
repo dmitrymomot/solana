@@ -115,3 +115,16 @@ func TestUpdateNftMetadata(t *testing.T) {
 		assert.EqualValues(t, md2.SellerFeeBasisPoints, md.SellerFeeBasisPoints+100)
 	})
 }
+
+func TestVerifyCreator(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create a new client
+	client := solana.New(solana.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
+
+	// Get the metadata for the master edition
+	md, err := client.GetTokenMetadata(ctx, e2e.MasterEditionMintAddr)
+	require.NoError(t, err)
+	require.NotEmpty(t, md)
+}
