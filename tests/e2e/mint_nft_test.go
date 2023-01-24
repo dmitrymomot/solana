@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMintNFT_MintCommonNFT(t *testing.T) {
+func TestMintNFT(t *testing.T) {
 	var (
 		tokenName   = "Test NFT"
 		tokenSymbol = "TSTn"
@@ -46,13 +46,17 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 				},
 				{
 					Address: e2e.Wallet1Addr,
-					Share:   90,
+					Share:   85,
+				},
+				{
+					Address: e2e.Wallet2Addr,
+					Share:   5,
 				},
 			},
 			Uses: &token_metadata.Uses{
 				UseMethod: token_metadata.TokenUseMethodBurn.String(),
-				Total:     10,
-				Remaining: 10,
+				Total:     1,
+				Remaining: 1,
 			},
 		})
 		require.NoError(t, err)
@@ -113,7 +117,7 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 		require.NotEmpty(t, md)
 
 		for _, creator := range md.Creators {
-			if creator.Address == e2e.Wallet1Addr {
+			if creator.Address == e2e.Wallet1Addr || creator.Address == e2e.FeePayerAddr {
 				assert.Truef(t, creator.Verified, "creator %s should be verified", creator.Address)
 			} else {
 				assert.Falsef(t, creator.Verified, "creator %s should not be verified", creator.Address)
@@ -122,7 +126,7 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 
 		tx, err := client.VerifyCreator(ctx, solana.VerifyCreatorParams{
 			MintAddress:    *mint,
-			CreatorAddress: e2e.FeePayerAddr,
+			CreatorAddress: e2e.Wallet2Addr,
 			FeePayer:       e2e.FeePayerAddr,
 		})
 		require.NoError(t, err)
@@ -132,6 +136,13 @@ func TestMintNFT_MintCommonNFT(t *testing.T) {
 		feePayer, err := solana.AccountFromBase58(e2e.FeePayerPrivateKey)
 		require.NoError(t, err)
 		tx, err = client.SignTransaction(ctx, feePayer, tx)
+		require.NoError(t, err)
+		require.NotEmpty(t, tx)
+
+		// Sign the transaction by the creator
+		creator, err := solana.AccountFromBase58(e2e.Wallet2PrivateKey)
+		require.NoError(t, err)
+		tx, err = client.SignTransaction(ctx, creator, tx)
 		require.NoError(t, err)
 		require.NotEmpty(t, tx)
 

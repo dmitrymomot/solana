@@ -315,7 +315,8 @@ type MintNonFungibleTokenEditionParams struct {
 	FeePayer string // required; base58 encoded address of the fee payer
 	Mint     string // required; base58 encoded address of the master edition
 	Owner    string // optional; base58 encoded address of the owner; default is fee payer
-	Edition  uint64 // optional; edition number
+	MintTo   string // optional; base58 encoded address to mint the token to; default is owner
+	SendTo   string // optional; base58 encoded address to send the token to; default is owner
 }
 
 // Validate validates the parameters.
@@ -341,10 +342,17 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 		params.Owner = params.FeePayer
 	}
 
+	// If mint to is not set, use owner as mint to.
+	if params.MintTo == "" {
+		params.MintTo = params.Owner
+	}
+
 	// Function scoped variables.
 	var (
 		feePayerPublicKey common.PublicKey = common.PublicKeyFromString(params.FeePayer)
 		ownerPublicKey    common.PublicKey = common.PublicKeyFromString(params.Owner)
+		mintToPublicKey   common.PublicKey = common.PublicKeyFromString(params.MintTo)
+		sendToPublicKey   *common.PublicKey
 
 		masterOwner            common.PublicKey = ownerPublicKey
 		masterOwnerAta         common.PublicKey
@@ -352,16 +360,17 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 		masterMetaPublicKey    common.PublicKey
 		masterEditionPublicKey common.PublicKey
 
-		newMintOwner            common.PublicKey = ownerPublicKey
+		newMintOwner            common.PublicKey = mintToPublicKey
 		newMintOwnerAta         common.PublicKey
 		newMint                 types.Account = NewAccount()
 		newMintMetaPublicKey    common.PublicKey
 		newMintEditionPublicKey common.PublicKey
 		newMintEditionMark      common.PublicKey
+		newMintEdition          uint64
 	)
 
 	// Get next edition number.
-	if params.Edition == 0 {
+	{
 		editionInfo, err := c.GetMasterEditionInfo(ctx, masterMintPublicKey.ToBase58())
 		if err != nil || editionInfo == nil {
 			return "", "", utils.StackErrors(
@@ -382,7 +391,7 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 			)
 		}
 
-		params.Edition = editionInfo.Supply + 1
+		newMintEdition = editionInfo.Supply + 1
 	}
 
 	masterOwnerAta, _, err = common.FindAssociatedTokenAddress(masterOwner, masterMintPublicKey)
@@ -439,7 +448,7 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 		)
 	}
 
-	newMintEditionMark, err = token_metadata.DeriveEditionMarkerPubkey(masterMintPublicKey, params.Edition)
+	newMintEditionMark, err = token_metadata.DeriveEditionMarkerPubkey(masterMintPublicKey, newMintEdition)
 	if err != nil {
 		return "", "", utils.StackErrors(
 			ErrMintNonFungibleTokenEdition,
@@ -495,9 +504,38 @@ func (c *Client) MintNonFungibleTokenEdition(ctx context.Context, params MintNon
 				MasterMetadata:             masterMetaPublicKey,
 
 				EditionMark: newMintEditionMark,
-				Edition:     params.Edition,
+				Edition:     newMintEdition,
 			},
 		),
+	}
+
+	if sendToPublicKey == nil {
+		recipientAta, _, err := common.FindAssociatedTokenAddress(*sendToPublicKey, newMint.PublicKey)
+		if err != nil {
+			return "", "", utils.StackErrors(
+				ErrMintNonFungibleTokenEdition,
+				ErrFindAssociatedTokenAddress,
+				err,
+			)
+		}
+		instructions = append(instructions,
+			associated_token_account.CreateAssociatedTokenAccount(
+				associated_token_account.CreateAssociatedTokenAccountParam{
+					Funder:                 feePayerPublicKey,
+					Owner:                  *sendToPublicKey,
+					Mint:                   newMint.PublicKey,
+					AssociatedTokenAccount: recipientAta,
+				},
+			),
+			token.Transfer(
+				token.TransferParam{
+					From:   newMintOwnerAta,
+					To:     recipientAta,
+					Auth:   newMintOwner,
+					Amount: 1,
+				},
+			),
+		)
 	}
 
 	txb, err := c.NewTransaction(ctx, NewTransactionParams{
@@ -742,7 +780,15 @@ func (c *Client) prepareInitMintTransaction(ctx context.Context, params initMint
 		))
 	}
 
-	// fmt.Println("instructions", utils.PrettyPrint(instructions))
+	// Verify fee payer if it's not the owner
+	if params.Owner != params.FeePayer {
+		instructions = append(instructions, metaplex_token_metadata.SignMetadata(
+			metaplex_token_metadata.SignMetadataParam{
+				Metadata: metaPubkey,
+				Creator:  feePayerPubKey,
+			},
+		))
+	}
 
 	txb, err := c.NewTransaction(ctx, NewTransactionParams{
 		FeePayer:     params.FeePayer,
