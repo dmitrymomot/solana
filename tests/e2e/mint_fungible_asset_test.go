@@ -67,11 +67,11 @@ func TestMintFungibleAsset_MintFixedSupply(t *testing.T) {
 	require.EqualValues(t, txInfo, solana.TransactionStatusSuccess)
 
 	// Check token balance
-	balance, deciamls, err := client.GetTokenBalance(ctx, e2e.Wallet1Addr, mintAddr)
+	balance, err := client.GetTokenBalance(ctx, e2e.Wallet1Addr, mintAddr)
 	require.NoError(t, err)
-	t.Logf("Token balance: %d, decimals: %d", balance, deciamls)
-	require.EqualValues(t, supplyAmount, balance)
-	require.EqualValues(t, uint8(0), deciamls)
+	t.Logf("Token balance: %d, decimals: %d", balance.Amount, balance.Decimals)
+	require.EqualValues(t, supplyAmount, balance.Amount)
+	require.EqualValues(t, uint8(0), balance.Decimals)
 
 	// Check token metadata
 	metadata, err := client.GetTokenMetadata(ctx, mintAddr)
