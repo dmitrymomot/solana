@@ -17,11 +17,11 @@ import (
 
 // MintNonFungibleParam defines the parameters for the MintNonFungible instruction.
 type MintNonFungibleParam struct {
-	Mint       common.PublicKey          // required; The token mint public key
-	Owner      common.PublicKey          // required; The wallet to mint tokens to
-	FeePayer   *common.PublicKey         // optional; The wallet to pay the fees from; default is Owner
-	Collection *common.PublicKey         // optional; The collection mint public key
-	Creators   *[]token_metadata.Creator // optional; The creators of the token; FeePayer must be one of the creators; Default is mintTo:100 & FeePayer:0
+	Mint       common.PublicKey  // required; The token mint public key
+	Owner      common.PublicKey  // required; The wallet to mint tokens to
+	FeePayer   *common.PublicKey // optional; The wallet to pay the fees from; default is Owner
+	Collection *common.PublicKey // optional; The collection mint public key
+	Creators   *[]Creator        // optional; The creators of the token; FeePayer must be one of the creators; Default is mintTo:100 & FeePayer:0
 
 	SupplyAmount         uint64 // required; The init supply of the token (in token minimal units), e.g: if you want to mint 10 tokens and decimals=9, amount=10*1e9/amount=10000000000; default is 0, then no tokens will be minted
 	MaxEditionSupply     uint64 // optional; The max print edition supply; default is 0
@@ -83,15 +83,15 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 		totalShare := uint8(0)
 		feePayerInCreators := false
 		for _, creator := range *params.Creators {
-			if creator.Address == params.FeePayer.ToBase58() {
+			if creator.Address.ToBase58() == params.FeePayer.ToBase58() {
 				feePayerInCreators = true
 			}
 			totalShare += creator.Share
 			creators = append(creators, metaplex_token_metadata.Creator{
-				Address: common.PublicKeyFromString(creator.Address),
+				Address: creator.Address,
 				Share:   creator.Share,
 				Verified: func() bool {
-					return creator.Address == params.Owner.String()
+					return creator.Address.ToBase58() == params.Owner.ToBase58()
 				}(),
 			})
 		}

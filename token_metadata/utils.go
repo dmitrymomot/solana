@@ -163,3 +163,23 @@ func DeriveEditionMarkerPubkey(mint common.PublicKey, edition uint64) (common.Pu
 
 	return pk, nil
 }
+
+// DeriveCollectionAuthorityRecord returns the collection authority record public key.
+func DeriveCollectionAuthorityRecord(mint, authority common.PublicKey) (common.PublicKey, error) {
+	pk, err := token_metadata.GetCollectionAuthorityRecord(mint, authority)
+	if err != nil {
+		return common.PublicKey{}, fmt.Errorf("failed to derive collection authority record pubkey: %w", err)
+	}
+
+	return pk, nil
+}
+
+// DeriveUseAuthorityRecord returns the use authority record public key.
+func DeriveUseAuthorityRecord(mint, authority common.PublicKey) (common.PublicKey, error) {
+	pk, err := token_metadata.GetUseAuthorityRecord(mint, authority)
+	if err != nil {
+		return common.PublicKey{}, fmt.Errorf("failed to derive use authority record pubkey: %w", err)
+	}
+
+	return pk, nil
+}
