@@ -1,6 +1,7 @@
 package instructions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
@@ -20,7 +21,7 @@ type TransferSOLParams struct {
 // of the caller to check this.
 // Amount must be greater than minimum account rent exemption (0.0025 SOL).
 func TransferSOL(params TransferSOLParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if params.Sender.ToBase58() == params.Recipient.ToBase58() {
 			return nil, fmt.Errorf("sender and recipient must be different")
 		}

@@ -1,6 +1,7 @@
 package instructions
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -27,8 +28,6 @@ type UpdateMetadataParams struct {
 	UseMethod            *token_metadata.TokenUseMethod // optional; new use method
 	UseLimit             *uint64                        // optional; new use limit; default is 1; if use method is empty, use limit will be ignored
 	UseRemaining         *uint64                        // optional; new use remaining; default equals use limit; if use method is empty, use remaining will be ignored
-
-	OldMetadata metaplex_token_metadata.DataV2 // required; the old token metadata
 }
 
 // Validate validates the params.
@@ -44,8 +43,8 @@ func (p UpdateMetadataParams) Validate() error {
 	}
 	if p.MetadataUri != nil &&
 		(*p.MetadataUri == "" ||
-			!strings.HasPrefix(*p.MetadataUri, "http://") ||
-			!strings.HasPrefix(*p.MetadataUri, "https://")) {
+			(!strings.HasPrefix(*p.MetadataUri, "http://") &&
+				!strings.HasPrefix(*p.MetadataUri, "https://"))) {
 		return fmt.Errorf("metadata uri is invalid")
 	}
 	if p.SellerFeeBasisPoints != nil && *p.SellerFeeBasisPoints > 10000 {
@@ -65,7 +64,7 @@ func (p UpdateMetadataParams) Validate() error {
 
 // UpdateMetadata updates the metadata of the token.
 func UpdateMetadata(params UpdateMetadataParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate update metadata: %w", err)
 		}
@@ -73,6 +72,11 @@ func UpdateMetadata(params UpdateMetadataParams) InstructionFunc {
 		tokenMetadataPubkey, err := token_metadata.DeriveTokenMetadataPubkey(params.Mint)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive token metadata pubkey: %w", err)
+		}
+
+		oldMetadata, err := c.GetTokenMetadata(ctx, params.Mint.ToBase58())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current token metadata: %w", err)
 		}
 
 		instructions := []types.Instruction{
@@ -105,8 +109,8 @@ func UpdateMetadata(params UpdateMetadataParams) InstructionFunc {
 						params.UseMethod != nil {
 
 						var (
-							name   = params.OldMetadata.Name
-							symbol = params.OldMetadata.Symbol
+							name   = oldMetadata.Data.Name
+							symbol = oldMetadata.Data.Symbol
 						)
 						if params.MetadataUri != nil {
 							metadata, _ := metadata.MetadataFromURI(*params.MetadataUri)
@@ -123,13 +127,13 @@ func UpdateMetadata(params UpdateMetadataParams) InstructionFunc {
 								if params.MetadataUri != nil {
 									return *params.MetadataUri
 								}
-								return params.OldMetadata.Uri
+								return oldMetadata.MetadataUri
 							}(),
 							SellerFeeBasisPoints: func() uint16 {
 								if params.SellerFeeBasisPoints != nil {
 									return *params.SellerFeeBasisPoints
 								}
-								return params.OldMetadata.SellerFeeBasisPoints
+								return oldMetadata.SellerFeeBasisPoints
 							}(),
 							Creators: func() *[]metaplex_token_metadata.Creator {
 								if params.Creators != nil && len(*params.Creators) > 0 {
@@ -144,16 +148,31 @@ func UpdateMetadata(params UpdateMetadataParams) InstructionFunc {
 										})
 									}
 									return &creators
+								} else if len(oldMetadata.Creators) > 0 {
+									creators := make([]metaplex_token_metadata.Creator, 0, len(oldMetadata.Creators))
+									for _, creator := range oldMetadata.Creators {
+										creators = append(creators, metaplex_token_metadata.Creator{
+											Address:  common.PublicKeyFromString(creator.Address),
+											Share:    creator.Share,
+											Verified: creator.Verified,
+										})
+									}
+									return &creators
 								}
-								return params.OldMetadata.Creators
+								return nil
 							}(),
 							Collection: func() *metaplex_token_metadata.Collection {
 								if params.Collection != nil {
 									return &metaplex_token_metadata.Collection{
 										Key: *params.Collection,
 									}
+								} else if oldMetadata.Collection != nil {
+									return &metaplex_token_metadata.Collection{
+										Key:      common.PublicKeyFromString(oldMetadata.Collection.Key),
+										Verified: oldMetadata.Collection.Verified,
+									}
 								}
-								return params.OldMetadata.Collection
+								return nil
 							}(),
 							Uses: func() *metaplex_token_metadata.Uses {
 								if params.UseMethod != nil {
@@ -168,8 +187,17 @@ func UpdateMetadata(params UpdateMetadataParams) InstructionFunc {
 										Remaining: *params.UseRemaining,
 										Total:     *params.UseLimit,
 									}
+								} else if oldMetadata.Uses != nil {
+									useMethod := token_metadata.TokenUseMethod(oldMetadata.Uses.UseMethod)
+									if useMethod.Valid() {
+										return &metaplex_token_metadata.Uses{
+											UseMethod: useMethod.ToMetadataUseMethod(),
+											Remaining: oldMetadata.Uses.Remaining,
+											Total:     oldMetadata.Uses.Total,
+										}
+									}
 								}
-								return params.OldMetadata.Uses
+								return nil
 							}(),
 						}
 					}

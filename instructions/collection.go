@@ -1,6 +1,7 @@
 package instructions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
@@ -36,7 +37,7 @@ func (p ApproveCollectionAuthorityParams) Validate() error {
 
 // ApproveCollectionAuthority approves the collection authority.
 func ApproveCollectionAuthority(params ApproveCollectionAuthorityParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate approve collection authority: %w", err)
 		}
@@ -91,7 +92,7 @@ func (p RevokeCollectionAuthorityParams) Validate() error {
 
 // RevokeCollectionAuthority revokes the collection authority.
 func RevokeCollectionAuthority(params RevokeCollectionAuthorityParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate revoke collection authority: %w", err)
 		}
@@ -145,7 +146,7 @@ func (p VerifyCollectionItemParams) Validate() error {
 
 // VerifyCollectionItem verifies the collection.
 func VerifyCollectionItem(params VerifyCollectionItemParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate verify collection: %w", err)
 		}
@@ -205,7 +206,7 @@ func (p UnverifyCollectionItemParams) Validate() error {
 
 // UnverifyCollectionItem unverifies the collection.
 func UnverifyCollectionItem(params UnverifyCollectionItemParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate unverify collection: %w", err)
 		}
@@ -274,7 +275,7 @@ func (p SetAndVerifyCollectionParams) Validate() error {
 
 // SetAndVerifyCollection sets and verifies the collection.
 func SetAndVerifyCollection(params SetAndVerifyCollectionParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate set and verify collection: %w", err)
 		}
@@ -337,7 +338,7 @@ func (p SetCollectionSizeParams) Validate() error {
 
 // SetCollectionSize sets the size of the collection.
 func SetCollectionSize(params SetCollectionSizeParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate set collection size: %w", err)
 		}
@@ -391,7 +392,7 @@ func (p VerifySizedCollectionItemParams) Validate() error {
 
 // VerifySizedCollectionItem verifies the collection.
 func VerifySizedCollectionItem(params VerifySizedCollectionItemParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate verify sized collection item: %w", err)
 		}
@@ -461,7 +462,7 @@ func (p UnverifySizedCollectionItemParams) Validate() error {
 
 // UnverifySizedCollectionItem unverifies the collection.
 func UnverifySizedCollectionItem(params UnverifySizedCollectionItemParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate unverify sized collection item: %w", err)
 		}
@@ -535,7 +536,7 @@ func (p SetAndVerifySizedCollectionItemParams) Validate() error {
 
 // SetAndVerifySizedCollectionItem sets and verifies the collection.
 func SetAndVerifySizedCollectionItem(params SetAndVerifySizedCollectionItemParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("validate set and verify sized collection item: %w", err)
 		}

@@ -1,6 +1,7 @@
 package instructions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
@@ -32,7 +33,7 @@ func (p CreateNonceAccountParams) Validate() error {
 
 // CreateNonceAccount creates a nonce account.
 func CreateNonceAccount(params CreateNonceAccountParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("create nonce account: %w", err)
 		}

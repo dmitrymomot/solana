@@ -1,6 +1,7 @@
 package instructions
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -23,45 +24,96 @@ type MintNonFungibleParam struct {
 	Collection *common.PublicKey // optional; The collection mint public key
 	Creators   *[]Creator        // optional; The creators of the token; FeePayer must be one of the creators; Default is mintTo:100 & FeePayer:0
 
-	SupplyAmount         uint64 // required; The init supply of the token (in token minimal units), e.g: if you want to mint 10 tokens and decimals=9, amount=10*1e9/amount=10000000000; default is 0, then no tokens will be minted
 	MaxEditionSupply     uint64 // optional; The max print edition supply; default is 0
 	MetadataURI          string // optional; URI of the token metadata; can be set later
+	TokenName            string // optional; Name of the token; used for the token metadata if MetadataURI is not set.
+	TokenSymbol          string // optional; Symbol of the token; used for the token metadata if MetadataURI is not set.
 	SellerFeeBasisPoints uint16 // optional; The seller fee basis points; default is 0
 
 	UseMethod *token_metadata.TokenUseMethod // optional; The use method; default is nil
 	UseLimit  *uint64                        // optional; The use times limit; default is 1; if UseMethod is nil, this field will be ignored
+}
 
-	MinBalanceForRentExemption uint64 // required; The minimum balance required to create the token account
+// Validate validates the parameters.
+func (p MintNonFungibleParam) Validate() error {
+	if p.Mint == (common.PublicKey{}) {
+		return fmt.Errorf("field Mint is required")
+	}
+	if p.Owner == (common.PublicKey{}) {
+		return fmt.Errorf("field Owner is required")
+	}
+	if p.MetadataURI != "" && !strings.HasPrefix(p.MetadataURI, "http") {
+		return fmt.Errorf("field MetadataURI must be a valid URI")
+	}
+	if p.FeePayer != nil && *p.FeePayer == (common.PublicKey{}) {
+		return fmt.Errorf("invalid fee payer public key")
+	}
+	if p.MetadataURI == "" && (p.TokenName == "" || p.TokenSymbol == "") {
+		return fmt.Errorf("field TokenName and TokenSymbol are required if MetadataURI is not set")
+	}
+	if p.TokenName != "" && (len(p.TokenName) < 2 || len(p.TokenName) > 32) {
+		return fmt.Errorf("token name must be between 2 and 32 characters")
+	}
+	if p.TokenSymbol != "" && (len(p.TokenSymbol) < 3 || len(p.TokenSymbol) > 10) {
+		return fmt.Errorf("token symbol must be between 3 and 10 characters")
+	}
+	return nil
 }
 
 // MintNonFungible creates instructions for minting fungible tokens.
 func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
-	return func() ([]types.Instruction, error) {
-		if params.Mint == (common.PublicKey{}) {
-			return nil, fmt.Errorf("field Mint is required")
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
+		if err := params.Validate(); err != nil {
+			return nil, fmt.Errorf("failed to validate parameters: %w", err)
 		}
-		if params.Owner == (common.PublicKey{}) {
-			return nil, fmt.Errorf("field MintTo is required")
-		}
+
 		if params.FeePayer == nil {
 			params.FeePayer = &params.Owner
 		}
-		if params.MetadataURI != "" && !strings.HasPrefix(params.MetadataURI, "http") {
-			return nil, fmt.Errorf("field MetadataURI must be a valid URI")
-		} else if params.MetadataURI == "" {
-			return nil, fmt.Errorf("field MetadataURI is required")
+
+		metadataV2 := metaplex_token_metadata.DataV2{
+			Name:                 params.TokenName,
+			Symbol:               params.TokenSymbol,
+			Uri:                  params.MetadataURI,
+			SellerFeeBasisPoints: params.SellerFeeBasisPoints,
+			Collection: func() *metaplex_token_metadata.Collection {
+				if params.Collection != nil {
+					return &metaplex_token_metadata.Collection{
+						Key: *params.Collection,
+					}
+				}
+				return nil
+			}(),
+			Uses: func() *metaplex_token_metadata.Uses {
+				if params.UseMethod != nil {
+					if params.UseLimit == nil {
+						params.UseLimit = utils.Pointer[uint64](1)
+					}
+					return &metaplex_token_metadata.Uses{
+						UseMethod: params.UseMethod.ToMetadataUseMethod(),
+						Remaining: *params.UseLimit,
+						Total:     *params.UseLimit,
+					}
+				}
+				return nil
+			}(),
 		}
 
-		md, err := metadata.MetadataFromURI(params.MetadataURI)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get metadata from URI: %w", err)
-		}
+		if params.MetadataURI != "" {
+			md, err := metadata.MetadataFromURI(params.MetadataURI)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get metadata from URI: %w", err)
+			}
 
-		if md.Name == "" || len(md.Name) < 2 || len(md.Name) > 32 {
-			return nil, fmt.Errorf("metadata name must be between 2 and 32 characters")
-		}
-		if md.Symbol == "" || len(md.Symbol) < 2 || len(md.Symbol) > 10 {
-			return nil, fmt.Errorf("metadata symbol must be between 2 and 10 characters")
+			if md.Name == "" || len(md.Name) < 2 || len(md.Name) > 32 {
+				return nil, fmt.Errorf("metadata name must be between 2 and 32 characters")
+			}
+			if md.Symbol == "" || len(md.Symbol) < 2 || len(md.Symbol) > 10 {
+				return nil, fmt.Errorf("metadata symbol must be between 2 and 10 characters")
+			}
+
+			metadataV2.Name = md.Name
+			metadataV2.Symbol = md.Symbol
 		}
 
 		metaPubkey, err := metaplex_token_metadata.GetTokenMetaPubkey(params.Mint)
@@ -79,33 +131,59 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 			return nil, fmt.Errorf("failed to find associated token address: %w", err)
 		}
 
-		creators := make([]metaplex_token_metadata.Creator, 0, len(*params.Creators))
-		totalShare := uint8(0)
-		feePayerInCreators := false
-		for _, creator := range *params.Creators {
-			if creator.Address.ToBase58() == params.FeePayer.ToBase58() {
-				feePayerInCreators = true
+		// Preparing of NFT creators list
+		if params.Creators != nil {
+			creators := make([]metaplex_token_metadata.Creator, 0, len(*params.Creators))
+			totalShare := uint8(0)
+			feePayerInCreators := false
+			for _, creator := range *params.Creators {
+				if creator.Address.ToBase58() == params.FeePayer.ToBase58() {
+					feePayerInCreators = true
+				}
+				totalShare += creator.Share
+				creators = append(creators, metaplex_token_metadata.Creator{
+					Address: creator.Address,
+					Share:   creator.Share,
+					Verified: func() bool {
+						return creator.Address.ToBase58() == params.Owner.ToBase58()
+					}(),
+				})
 			}
-			totalShare += creator.Share
-			creators = append(creators, metaplex_token_metadata.Creator{
-				Address: creator.Address,
-				Share:   creator.Share,
-				Verified: func() bool {
-					return creator.Address.ToBase58() == params.Owner.ToBase58()
-				}(),
-			})
+
+			if !feePayerInCreators {
+				creators = append(creators, metaplex_token_metadata.Creator{
+					Address:  *params.FeePayer,
+					Share:    0,
+					Verified: false,
+				})
+			}
+
+			if totalShare != 100 {
+				return nil, fmt.Errorf("creators share must be 100, got %d", totalShare)
+			}
+
+			metadataV2.Creators = &creators
+		} else {
+			creators := []metaplex_token_metadata.Creator{{
+				Address:  params.Owner,
+				Share:    100,
+				Verified: true,
+			}}
+
+			if params.FeePayer.ToBase58() != params.Owner.ToBase58() {
+				creators = append(creators, metaplex_token_metadata.Creator{
+					Address:  *params.FeePayer,
+					Share:    0,
+					Verified: false,
+				})
+			}
+
+			metadataV2.Creators = &creators
 		}
 
-		if !feePayerInCreators {
-			creators = append(creators, metaplex_token_metadata.Creator{
-				Address:  *params.FeePayer,
-				Share:    0,
-				Verified: false,
-			})
-		}
-
-		if totalShare != 100 {
-			return nil, fmt.Errorf("creators share must be 100, got %d", totalShare)
+		rentExemption, err := c.GetMinimumBalanceForRentExemption(ctx, token.MintAccountSize)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get minimum balance for rent exemption: %w", err)
 		}
 
 		instructions := []types.Instruction{
@@ -113,10 +191,10 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 				From:     *params.FeePayer,
 				New:      params.Mint,
 				Owner:    common.TokenProgramID,
-				Lamports: params.MinBalanceForRentExemption,
+				Lamports: rentExemption,
 				Space:    token.MintAccountSize,
 			}),
-			token.InitializeMint(token.InitializeMintParam{
+			token.InitializeMint2(token.InitializeMint2Param{
 				Decimals:   0,
 				Mint:       params.Mint,
 				MintAuth:   params.Owner,
@@ -130,34 +208,7 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 				UpdateAuthority:         params.Owner,
 				UpdateAuthorityIsSigner: true,
 				IsMutable:               true,
-				Data: metaplex_token_metadata.DataV2{
-					Name:                 md.Name,
-					Symbol:               md.Symbol,
-					Uri:                  params.MetadataURI,
-					SellerFeeBasisPoints: params.SellerFeeBasisPoints,
-					Creators:             &creators,
-					Collection: func() *metaplex_token_metadata.Collection {
-						if params.Collection != nil {
-							return &metaplex_token_metadata.Collection{
-								Key: *params.Collection,
-							}
-						}
-						return nil
-					}(),
-					Uses: func() *metaplex_token_metadata.Uses {
-						if params.UseMethod != nil {
-							if params.UseLimit == nil {
-								params.UseLimit = utils.Pointer[uint64](1)
-							}
-							return &metaplex_token_metadata.Uses{
-								UseMethod: params.UseMethod.ToMetadataUseMethod(),
-								Remaining: *params.UseLimit,
-								Total:     *params.UseLimit,
-							}
-						}
-						return nil
-					}(),
-				},
+				Data:                    metadataV2,
 			}),
 			associated_token_account.CreateAssociatedTokenAccount(
 				associated_token_account.CreateAssociatedTokenAccountParam{

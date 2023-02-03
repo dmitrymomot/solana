@@ -1,6 +1,7 @@
 package instructions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/portto/solana-go-sdk/common"
@@ -28,7 +29,7 @@ func (p VerifyCreatorParams) Validate() error {
 
 // VerifyCreator verifies the creator of the token metadata.
 func VerifyCreator(params VerifyCreatorParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("verify creator: %w", err)
 		}
@@ -70,7 +71,7 @@ func (p RemoveCreatorVerificationParams) Validate() error {
 
 // RemoveCreatorVerification removes the creator verification of the token metadata.
 func RemoveCreatorVerification(params RemoveCreatorVerificationParams) InstructionFunc {
-	return func() ([]types.Instruction, error) {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
 		if err := params.Validate(); err != nil {
 			return nil, fmt.Errorf("remove creator verification: %w", err)
 		}

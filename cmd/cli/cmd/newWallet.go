@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
-	"github.com/solplaydev/solana"
+	"github.com/solplaydev/solana/common"
 	"github.com/spf13/cobra"
 )
 
@@ -21,12 +21,12 @@ var newWalletCmd = &cobra.Command{
 		green := color.New(color.BgGreen, color.FgHiWhite).SprintFunc()
 		cyan := color.New(color.FgCyan).SprintFunc()
 
-		mnemonic, err := solana.NewMnemonic(solana.MnemonicLength12)
+		mnemonic, err := common.NewMnemonic(common.MnemonicLength12)
 		if err != nil {
 			panic(err)
 		}
 
-		wallet, err := solana.DeriveAccountFromMnemonicBip44(mnemonic)
+		wallet, err := common.DeriveAccountFromMnemonicBip44(mnemonic)
 		if err != nil {
 			panic(err)
 		}
@@ -34,7 +34,7 @@ var newWalletCmd = &cobra.Command{
 		fmt.Println("\n" + green("*** Client created successfully! ***"))
 		fmt.Println(cyan("Mnemonic: ") + mnemonic)
 		fmt.Println(cyan("Wallet address: ") + wallet.PublicKey.ToBase58())
-		fmt.Println(cyan("Wallet private key: ") + solana.AccountToBase58(wallet))
+		fmt.Println(cyan("Wallet private key: ") + common.AccountToBase58(wallet))
 	},
 }
 

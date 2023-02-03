@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/portto/solana-go-sdk/rpc"
 )
@@ -98,6 +99,7 @@ func (e *StakedError) As(target interface{}) bool {
 // errToString converts the error to a string.
 func errToString(err error) string {
 	if rpcErr, ok := err.(*rpc.JsonRpcError); ok {
+		log.Printf("JsonRpcError: %+v", rpcErr)
 		return rpcErr.Message
 	}
 

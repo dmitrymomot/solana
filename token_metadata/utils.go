@@ -22,6 +22,10 @@ func DeriveTokenMetadataPubkey(mint common.PublicKey) (common.PublicKey, error) 
 
 // DeserializeMetadata deserializes the metadata.
 func DeserializeMetadata(data []byte) (*Metadata, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("failed to deserialize metadata: data is empty")
+	}
+
 	md, err := token_metadata.MetadataDeserialize(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deserialize metadata: %w", err)
@@ -35,6 +39,7 @@ func DeserializeMetadata(data []byte) (*Metadata, error) {
 		TokenStandard:        CastToTokenStandard(*md.TokenStandard).String(),
 		MetadataUri:          md.Data.Uri,
 		SellerFeeBasisPoints: md.Data.SellerFeeBasisPoints,
+		Data:                 &metadata.Metadata{},
 	}
 
 	if md.Data.Uri != "" {
