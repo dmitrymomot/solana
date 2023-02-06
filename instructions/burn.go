@@ -54,12 +54,13 @@ func BurnNft(params BurnNftParams) InstructionFunc {
 			return nil, fmt.Errorf("failed to derive master edition pubkey: %w", err)
 		}
 
-		var collectionMetadata common.PublicKey
+		var collectionMetadata *common.PublicKey
 		if params.CollectionMint != nil {
-			collectionMetadata, err = token_metadata.DeriveTokenMetadataPubkey(*params.CollectionMint)
+			cmd, err := token_metadata.DeriveTokenMetadataPubkey(*params.CollectionMint)
 			if err != nil {
 				return nil, fmt.Errorf("failed to derive collection metadata pubkey: %w", err)
 			}
+			collectionMetadata = &cmd
 		}
 
 		return []types.Instruction{

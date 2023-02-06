@@ -177,7 +177,12 @@ func (c *Client) SignTransaction(ctx context.Context, wallet sdktypes.Account, t
 
 // Send transaction
 // returns the transaction hash or an error
-func (c *Client) SendTransaction(ctx context.Context, txSource string) (string, error) {
+func (c *Client) SendTransaction(ctx context.Context, txSource string, i ...uint8) (string, error) {
+	var tryN uint8 = 1
+	if len(i) > 0 {
+		tryN = i[0]
+	}
+
 	txb, err := utils.Base64ToBytes(txSource)
 	if err != nil {
 		return "", utils.StackErrors(ErrGetTransactionFee, err)
@@ -195,8 +200,8 @@ func (c *Client) SendTransaction(ctx context.Context, txSource string) (string, 
 		}
 
 		// retry if blockhash not found
-		if strings.Contains(err.Error(), "BlockhashNotFound") {
-			return c.SendTransaction(ctx, txSource)
+		if strings.Contains(err.Error(), "BlockhashNotFound") && tryN < 3 {
+			return c.SendTransaction(ctx, txSource, tryN+1)
 		}
 
 		return "", utils.StackErrors(ErrSendTransaction, err)
@@ -212,21 +217,17 @@ func (c *Client) GetTransactionStatus(ctx context.Context, txhash string) (types
 	if err != nil {
 		return types.TransactionStatusUnknown, utils.StackErrors(ErrGetTransactionStatus, err)
 	}
-
 	if status == nil {
 		return types.TransactionStatusUnknown, nil
 	}
-
 	if status.Err != nil {
 		return types.TransactionStatusFailure, fmt.Errorf("transaction failed: %v", status.Err)
 	}
 
 	result := types.TransactionStatusUnknown
-
 	if status.Confirmations != nil && *status.Confirmations > 0 {
 		result = types.TransactionStatusInProgress
 	}
-
 	if status.ConfirmationStatus != nil {
 		result = types.ParseTransactionStatus(*status.ConfirmationStatus)
 	}

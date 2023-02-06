@@ -35,7 +35,7 @@ func SignAndSendTransaction(ctx context.Context, client *client.Client, tx strin
 	// Send the transaction
 	txHash, err := client.SendTransaction(ctx, tx)
 	if err != nil {
-		return "", types.TransactionStatusUnknown, fmt.Errorf("failed to send transaction: %w", err)
+		return "", types.TransactionStatusFailure, fmt.Errorf("failed to send transaction: %w", err)
 	}
 
 	// Wait for the transaction to be confirmed
