@@ -330,9 +330,6 @@ func (p SetCollectionSizeParams) Validate() error {
 	if p.CollectionAuthority == (common.PublicKey{}) {
 		return fmt.Errorf("collection authority is required")
 	}
-	if p.Size == 0 {
-		return fmt.Errorf("collection size is required")
-	}
 	return nil
 }
 

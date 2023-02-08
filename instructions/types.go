@@ -9,8 +9,6 @@ import (
 	"github.com/solplaydev/solana/token_metadata"
 )
 
-var Burner = common.PublicKeyFromString("burn68h9dS2tvZwtCFMt79SyaEgvqtcZZWJphizQxgt") // Burner address
-
 type (
 	// InstructionFunc is a function that returns a list of prepared instructions.
 	InstructionFunc func(ctx context.Context, c Client) ([]types.Instruction, error)

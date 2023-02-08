@@ -85,6 +85,11 @@ func NewAccount() types.Account {
 	return types.NewAccount()
 }
 
+// NewAccountFromSeed creates a new Solana account from a seed
+func NewAccountFromSeed(seed []byte) (types.Account, error) {
+	return types.AccountFromSeed(seed)
+}
+
 // ToBase58 converts an Solana account to a base58 encoded string
 func AccountToBase58(a types.Account) string {
 	return base58.Encode(a.PrivateKey)
@@ -160,6 +165,18 @@ func DeriveTokenAccountPubkey(wallet, mint common.PublicKey) (common.PublicKey, 
 	return ata, nil
 }
 
+// DeriveTokenLockAccount derives an associated token holder account from a Solana account and a mint address.
+func DeriveTokenLockAccount(walletAddress, tokenMintAddress common.PublicKey) (common.PublicKey, error) {
+	seeds := [][]byte{}
+	seeds = append(seeds, []byte("token_holder"))
+	seeds = append(seeds, walletAddress.Bytes())
+	seeds = append(seeds, common.TokenProgramID.Bytes())
+	seeds = append(seeds, tokenMintAddress.Bytes())
+
+	pubkey, _, err := common.FindProgramAddress(seeds, common.SPLAssociatedTokenAccountProgramID)
+	return pubkey, err
+}
+
 // deriveFromMnemonicBip44 derives an Solana account from a mnemonic phrase
 // Compatible with BIP44 (phantom wallet)
 func deriveFromMnemonicBip44(mnemonic string, path int) (types.Account, error) {
@@ -179,4 +196,17 @@ func deriveFromMnemonicBip44(mnemonic string, path int) (types.Account, error) {
 	}
 
 	return account, nil
+}
+
+// FindBurnerPubkey returns the pubkey of the burner account
+func FindBurnerPubkey() (common.PublicKey, error) {
+	pubkey, _, err := common.FindProgramAddress(
+		[][]byte{
+			[]byte("metadata"),
+			common.MetaplexTokenMetaProgramID.Bytes(),
+			[]byte("burn"),
+		},
+		common.MetaplexTokenMetaProgramID,
+	)
+	return pubkey, err
 }

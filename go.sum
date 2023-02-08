@@ -46,8 +46,8 @@ github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0/go.mod h1:DZGJHZMqrU4JJqFAWUS2U
 github.com/decred/dcrd/lru v1.0.0/go.mod h1:mxKOwFd7lFjN2GZYsiz/ecgqR6kkYAl+0pz0tEMk218=
 github.com/denisenkom/go-mssqldb v0.9.0 h1:RSohk2RsiZqLZ0zCjtfn3S4Gp4exhpBWHyQ7D0yGjAk=
 github.com/denisenkom/go-mssqldb v0.9.0/go.mod h1:xbL0rPBG9cCiLr28tMa8zpbdarY27NDyej4t/EjAShU=
-github.com/dmitrymomot/solana-go-sdk v1.23.3 h1:SyBviud+2qMlDwptHiiRzTCL8QJ2epef3HKhB2dFNb0=
-github.com/dmitrymomot/solana-go-sdk v1.23.3/go.mod h1:CZfIfBqsf50c3wZi78YwlAjsbL7MsLXIarGYhC6hmhQ=
+github.com/dmitrymomot/solana-go-sdk v1.23.5 h1:OMIXc6BzfQu52osdxoWmu3bFm1S0ybV+3VXpdX85TkY=
+github.com/dmitrymomot/solana-go-sdk v1.23.5/go.mod h1:CZfIfBqsf50c3wZi78YwlAjsbL7MsLXIarGYhC6hmhQ=
 github.com/ethereum/go-ethereum v1.10.20 h1:75IW830ClSS40yrQC1ZCMZCt5I+zU16oqId2SiQwdQ4=
 github.com/ethereum/go-ethereum v1.10.20/go.mod h1:LWUN82TCHGpxB3En5HVmLLzPD7YSrEUFmFfN1nKkVN0=
 github.com/everFinance/arseeding v1.0.3 h1:V1e98ehAGFJch6T7aP9jeb2cpoll68fB/GyuMmoBesM=

@@ -117,8 +117,9 @@ func TestFungibleToken(t *testing.T) {
 				TokenAccountOwner: e2e.Wallet1Pubkey,
 			})).
 			AddInstruction(instructions.CloseTokenAccount(instructions.CloseTokenAccountParams{
-				Owner: e2e.Wallet1Pubkey,
-				Mint:  &mint.PublicKey,
+				Owner:    e2e.Wallet1Pubkey,
+				Mint:     &mint.PublicKey,
+				FeePayer: &e2e.FeePayerPubkey,
 			})).
 			Build(ctx)
 		require.NoError(t, err)
@@ -397,8 +398,9 @@ func TestFreezeTokenAccount(t *testing.T) {
 			tx, err := transaction.NewTransactionBuilder(sc).
 				SetFeePayer(e2e.FeePayerPubkey).
 				AddInstruction(instructions.CloseTokenAccount(instructions.CloseTokenAccountParams{
-					Owner: e2e.Wallet2Pubkey,
-					Mint:  &mint.PublicKey,
+					Owner:    e2e.Wallet2Pubkey,
+					Mint:     &mint.PublicKey,
+					FeePayer: &e2e.FeePayerPubkey,
 				})).
 				Build(ctx)
 			require.NoError(t, err)
@@ -438,8 +440,9 @@ func TestFreezeTokenAccount(t *testing.T) {
 					TokenAccountOwner: e2e.Wallet1Pubkey,
 				})).
 				AddInstruction(instructions.CloseTokenAccount(instructions.CloseTokenAccountParams{
-					Owner: e2e.Wallet1Pubkey,
-					Mint:  &mint.PublicKey,
+					Owner:    e2e.Wallet1Pubkey,
+					Mint:     &mint.PublicKey,
+					FeePayer: &e2e.FeePayerPubkey,
 				})).
 				Build(ctx)
 			require.NoError(t, err)

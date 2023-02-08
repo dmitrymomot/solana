@@ -54,4 +54,4 @@ require (
 	gorm.io/gorm v1.22.4 // indirect
 )
 
-replace github.com/portto/solana-go-sdk => github.com/dmitrymomot/solana-go-sdk v1.23.3
+replace github.com/portto/solana-go-sdk => github.com/dmitrymomot/solana-go-sdk v1.23.5

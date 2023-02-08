@@ -7,6 +7,7 @@ import (
 	"github.com/portto/solana-go-sdk/common"
 	metaplex_token_metadata "github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/portto/solana-go-sdk/types"
+	commonx "github.com/solplaydev/solana/common"
 	"github.com/solplaydev/solana/token_metadata"
 )
 
@@ -57,6 +58,11 @@ func ApproveUseAuthority(params ApproveUseAuthorityParams) InstructionFunc {
 			return nil, fmt.Errorf("failed to derive token metadata pubkey: %w", err)
 		}
 
+		burner, err := commonx.FindBurnerPubkey()
+		if err != nil {
+			return nil, fmt.Errorf("failed to find burner pubkey: %w", err)
+		}
+
 		return []types.Instruction{
 			metaplex_token_metadata.ApproveUseAuthority(metaplex_token_metadata.ApproveUseAuthorityParam{
 				UseAuthorityRecord: useAuthorityRecord,
@@ -66,7 +72,7 @@ func ApproveUseAuthority(params ApproveUseAuthorityParams) InstructionFunc {
 				OwnerTokenAccount:  ownerAta,
 				Metadata:           metadata,
 				Mint:               params.Mint,
-				Burner:             Burner,
+				Burner:             burner,
 				NumberOfUses:       params.NumberOfUses,
 			}),
 		}, nil
@@ -158,7 +164,7 @@ func UseToken(params UseTokenParams) InstructionFunc {
 			return nil, fmt.Errorf("failed to get use authority record: %w", err)
 		}
 
-		useAuthorityAta, _, err := common.FindAssociatedTokenAddress(params.UseAuthority, params.Mint)
+		ata, _, err := common.FindAssociatedTokenAddress(params.MintOwner, params.Mint)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find associated token address: %w", err)
 		}
@@ -168,15 +174,20 @@ func UseToken(params UseTokenParams) InstructionFunc {
 			return nil, fmt.Errorf("failed to derive token metadata pubkey: %w", err)
 		}
 
+		burner, err := commonx.FindBurnerPubkey()
+		if err != nil {
+			return nil, fmt.Errorf("failed to find burner pubkey: %w", err)
+		}
+
 		return []types.Instruction{
 			metaplex_token_metadata.Utilize(metaplex_token_metadata.UtilizeParam{
 				Metadata:           metadata,
-				TokenAccount:       useAuthorityAta,
+				TokenAccount:       ata,
 				Mint:               params.Mint,
 				UseAuthority:       params.UseAuthority,
-				Owner:              params.UseAuthority,
+				Owner:              params.MintOwner,
 				UseAuthorityRecord: useAuthorityRecord,
-				Burner:             Burner,
+				Burner:             burner,
 				NumberOfUses:       1,
 			}),
 		}, nil

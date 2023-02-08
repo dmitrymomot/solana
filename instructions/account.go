@@ -71,6 +71,7 @@ type CloseTokenAccountParams struct {
 	Owner             common.PublicKey  // required; the owner of the token account
 	CloseTokenAccount *common.PublicKey // required if Mint is empty; the public key of account to close
 	Mint              *common.PublicKey // required if CloseTokenAccount is empty; the mint of the token account
+	FeePayer          *common.PublicKey // optional; the fee payer of the transaction, if not set, the owner will be used; if set, the rent exemption balance will be transferred to it.
 }
 
 // Validate checks that the required fields of the params are set.
@@ -86,6 +87,9 @@ func (p CloseTokenAccountParams) Validate() error {
 	}
 	if p.CloseTokenAccount == nil && p.Mint == nil {
 		return fmt.Errorf("one of close token account or mint must be set")
+	}
+	if p.FeePayer != nil && *p.FeePayer == (common.PublicKey{}) {
+		return fmt.Errorf("invalid fee payer public key")
 	}
 	return nil
 }
@@ -105,11 +109,15 @@ func CloseTokenAccount(params CloseTokenAccountParams) InstructionFunc {
 			params.CloseTokenAccount = &ata
 		}
 
+		if params.FeePayer == nil {
+			params.FeePayer = &params.Owner
+		}
+
 		return []types.Instruction{
 			token.CloseAccount(token.CloseAccountParam{
 				Account: *params.CloseTokenAccount,
 				Auth:    params.Owner,
-				To:      params.Owner,
+				To:      *params.FeePayer,
 			}),
 		}, nil
 	}

@@ -18,20 +18,22 @@ import (
 
 // MintNonFungibleParam defines the parameters for the MintNonFungible instruction.
 type MintNonFungibleParam struct {
-	Mint       common.PublicKey  // required; The token mint public key
-	Owner      common.PublicKey  // required; The wallet to mint tokens to
-	FeePayer   *common.PublicKey // optional; The wallet to pay the fees from; default is Owner
-	Collection *common.PublicKey // optional; The collection mint public key
-	Creators   *[]Creator        // optional; The creators of the token; FeePayer must be one of the creators; Default is mintTo:100 & FeePayer:0
+	Mint                common.PublicKey  // required; The token mint public key
+	Owner               common.PublicKey  // required; The wallet to mint tokens to
+	FeePayer            *common.PublicKey // optional; The wallet to pay the fees from; default is Owner
+	Collection          *common.PublicKey // optional; The collection mint public key
+	CollectionAuthority *common.PublicKey // optional; The collection authority; default is Owner
+	Creators            *[]Creator        // optional; The creators of the token; FeePayer must be one of the creators; Default is mintTo:100 & FeePayer:0
 
-	MaxEditionSupply     uint64 // optional; The max print edition supply; default is 0
-	MetadataURI          string // optional; URI of the token metadata; can be set later
-	TokenName            string // optional; Name of the token; used for the token metadata if MetadataURI is not set.
-	TokenSymbol          string // optional; Symbol of the token; used for the token metadata if MetadataURI is not set.
-	SellerFeeBasisPoints uint16 // optional; The seller fee basis points; default is 0
+	MaxEditionSupply     uint64  // optional; The max print edition supply; default is 0
+	MetadataURI          string  // optional; URI of the token metadata; can be set later
+	TokenName            string  // optional; Name of the token; used for the token metadata if MetadataURI is not set.
+	TokenSymbol          string  // optional; Symbol of the token; used for the token metadata if MetadataURI is not set.
+	SellerFeeBasisPoints uint16  // optional; The seller fee basis points; default is 0
+	CollectionSize       *uint64 // optional; The collection size; default is 0; if Collection is nil, this field will be ignored
 
 	UseMethod *token_metadata.TokenUseMethod // optional; The use method; default is nil
-	UseLimit  *uint64                        // optional; The use times limit; default is 1; if UseMethod is nil, this field will be ignored
+	UseLimit  *uint64                        // optional; The use times limit; default is 1; if UseMethod is nil, this field will be ignored; if use method is single, this field will be ignored.
 }
 
 // Validate validates the parameters.
@@ -56,6 +58,15 @@ func (p MintNonFungibleParam) Validate() error {
 	}
 	if p.TokenSymbol != "" && (len(p.TokenSymbol) < 3 || len(p.TokenSymbol) > 10) {
 		return fmt.Errorf("token symbol must be between 3 and 10 characters")
+	}
+	if p.Collection != nil && *p.Collection == (common.PublicKey{}) {
+		return fmt.Errorf("invalid collection public key")
+	}
+	if p.CollectionAuthority != nil && *p.CollectionAuthority == (common.PublicKey{}) {
+		return fmt.Errorf("invalid collection authority public key")
+	}
+	if p.UseMethod != nil && !p.UseMethod.Valid() {
+		return fmt.Errorf("invalid use method")
 	}
 	return nil
 }
@@ -86,7 +97,8 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 			}(),
 			Uses: func() *metaplex_token_metadata.Uses {
 				if params.UseMethod != nil {
-					if params.UseLimit == nil {
+					if params.UseLimit == nil || *params.UseLimit == 0 ||
+						*params.UseMethod == token_metadata.TokenUseMethodSingle {
 						params.UseLimit = utils.Pointer[uint64](1)
 					}
 					return &metaplex_token_metadata.Uses{
@@ -200,7 +212,7 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 				MintAuth:   params.Owner,
 				FreezeAuth: utils.Pointer(params.Owner),
 			}),
-			metaplex_token_metadata.CreateMetadataAccountV2(metaplex_token_metadata.CreateMetadataAccountV2Param{
+			metaplex_token_metadata.CreateMetadataAccountV3(metaplex_token_metadata.CreateMetadataAccountV3Param{
 				Metadata:                metaPubkey,
 				Mint:                    params.Mint,
 				MintAuthority:           params.Owner,
@@ -209,6 +221,7 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 				UpdateAuthorityIsSigner: true,
 				IsMutable:               true,
 				Data:                    metadataV2,
+				CollectionSize:          params.CollectionSize,
 			}),
 			associated_token_account.CreateAssociatedTokenAccount(
 				associated_token_account.CreateAssociatedTokenAccountParam{
@@ -247,6 +260,35 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 					Creator:  *params.FeePayer,
 				},
 			))
+		}
+
+		// Add instructions to approve collection authority if nft is a sized collection
+		if params.CollectionSize != nil {
+			instr, err := ApproveCollectionAuthority(ApproveCollectionAuthorityParams{
+				CollectionMint:            params.Mint,
+				CollectionUpdateAuthority: params.Owner,
+				NewCollectionAuthority:    params.Owner,
+				FeePayer:                  params.FeePayer,
+			})(ctx, c)
+			if err != nil {
+				return nil, fmt.Errorf("failed to approve collection authority: %w", err)
+			}
+
+			instructions = append(instructions, instr...)
+		}
+
+		// Add instructions to verify sized collection item if nft is a part of a sized collection
+		if params.Collection != nil && params.CollectionAuthority != nil {
+			instr, err := VerifySizedCollectionItem(VerifySizedCollectionItemParams{
+				Mint:                params.Mint,
+				CollectionMint:      *params.Collection,
+				CollectionAuthority: *params.CollectionAuthority,
+			})(ctx, c)
+			if err != nil {
+				return nil, fmt.Errorf("failed to verify sized collection item: %w", err)
+			}
+
+			instructions = append(instructions, instr...)
 		}
 
 		return instructions, nil
