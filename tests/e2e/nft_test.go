@@ -591,3 +591,338 @@ func TestUseNFT_Single(t *testing.T) {
 		})
 	})
 }
+
+func TestUseNFT_Multi(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create a new sc
+	sc := client.New(client.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
+
+	var (
+		tokenName   = "Test NFT"
+		tokenSymbol = "TSTn"
+		metadataUri = "https://www.arweave.net/jQ6ecVJtPZwaC-tsSYftEqaKsC8R3winHH2Z2hLxiBk?ext=json"
+		mint        = common.NewAccount()
+	)
+
+	fmt.Println("Mint:", mint.PublicKey.ToBase58())
+
+	// Mint NFT
+	t.Run("Mint NFT", func(t *testing.T) {
+		// Mint NFT
+		tx, err := transaction.NewTransactionBuilder(sc).
+			SetFeePayer(e2e.FeePayerPubkey).
+			AddSigner(mint).
+			AddInstruction(instructions.MintNonFungible(instructions.MintNonFungibleParam{
+				Mint:                 mint.PublicKey,
+				Owner:                e2e.Wallet1Pubkey,
+				FeePayer:             &e2e.FeePayerPubkey,
+				MetadataURI:          metadataUri,
+				SellerFeeBasisPoints: 1000,
+				UseMethod:            utils.Pointer(token_metadata.TokenUseMethodMulti),
+				UseLimit:             utils.Pointer[uint64](10),
+			})).
+			AddInstruction(instructions.ApproveUseAuthority(instructions.ApproveUseAuthorityParams{
+				FeePayer:        e2e.FeePayerPubkey,
+				Mint:            mint.PublicKey,
+				MintOwner:       e2e.Wallet1Pubkey,
+				NewUseAuthority: e2e.Wallet1Pubkey,
+				NumberOfUses:    1,
+			})).
+			AddInstruction(instructions.ApproveUseAuthority(instructions.ApproveUseAuthorityParams{
+				FeePayer:        e2e.FeePayerPubkey,
+				Mint:            mint.PublicKey,
+				MintOwner:       e2e.Wallet1Pubkey,
+				NewUseAuthority: e2e.Wallet2Pubkey,
+				NumberOfUses:    2,
+			})).
+			Build(ctx)
+		require.NoError(t, err)
+		require.NotEmpty(t, tx)
+
+		txHash, txStatus, err := e2e.SignAndSendTransaction(ctx, sc, tx, e2e.FeePayerPrivateKey, e2e.Wallet1PrivateKey)
+		require.NoError(t, err)
+		fmt.Println("tx:", txHash, "status:", txStatus)
+		require.NotEmpty(t, txHash)
+		require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+
+		// Check token metadata
+		t.Run("check token metadata", func(t *testing.T) {
+			metadata, err := sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+			require.NoError(t, err)
+			require.EqualValues(t, tokenName, metadata.Data.Name)
+			require.EqualValues(t, tokenSymbol, metadata.Data.Symbol)
+			require.EqualValues(t, token_metadata.TokenStandardNonFungible, metadata.TokenStandard)
+			require.EqualValues(t, token_metadata.TokenUseMethodMulti.String(), metadata.Uses.UseMethod)
+			require.EqualValues(t, uint64(10), metadata.Uses.Total)
+			require.EqualValues(t, uint64(10), metadata.Uses.Remaining)
+		})
+
+		// Check token balance
+		t.Run("check token balance", func(t *testing.T) {
+			balance, err := sc.GetTokenBalance(ctx, e2e.Wallet1Pubkey.ToBase58(), mint.PublicKey.ToBase58())
+			require.NoError(t, err)
+			require.EqualValues(t, uint64(1), balance.Amount)
+		})
+	})
+
+	// Use NFT
+	t.Run("Use NFT by wallet 2", func(t *testing.T) {
+		tx, err := transaction.NewTransactionBuilder(sc).
+			SetFeePayer(e2e.FeePayerPubkey).
+			AddInstruction(instructions.UseToken(instructions.UseTokenParams{
+				FeePayer:     e2e.FeePayerPubkey,
+				Mint:         mint.PublicKey,
+				MintOwner:    e2e.Wallet1Pubkey,
+				UseAuthority: e2e.Wallet2Pubkey,
+			})).
+			Build(ctx)
+		require.NoError(t, err)
+		require.NotEmpty(t, tx)
+
+		txHash, txStatus, err := e2e.SignAndSendTransaction(
+			ctx, sc, tx,
+			e2e.FeePayerPrivateKey,
+			e2e.Wallet2PrivateKey,
+		)
+		require.NoError(t, err)
+		fmt.Println("tx:", txHash, "status:", txStatus)
+		require.NotEmpty(t, txHash)
+		require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+
+		// Check token metadata
+		t.Run("check token metadata", func(t *testing.T) {
+			metadata, err := sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+			require.NoError(t, err)
+			require.EqualValues(t, uint64(10), metadata.Uses.Total)
+			require.EqualValues(t, uint64(9), metadata.Uses.Remaining)
+		})
+	})
+
+	// Revoke use authority of wallet 2 and try to use NFT
+	t.Run("Revoke use authority of wallet 2 and try to use NFT", func(t *testing.T) {
+		// Remove use authority of wallet 2
+		tx, err := transaction.NewTransactionBuilder(sc).
+			SetFeePayer(e2e.FeePayerPubkey).
+			AddInstruction(instructions.RevokeUseAuthority(instructions.RevokeUseAuthorityParams{
+				Mint:         mint.PublicKey,
+				MintOwner:    e2e.Wallet1Pubkey,
+				UseAuthority: e2e.Wallet2Pubkey,
+			})).
+			Build(ctx)
+		require.NoError(t, err)
+		require.NotEmpty(t, tx)
+
+		txHash, txStatus, err := e2e.SignAndSendTransaction(
+			ctx, sc, tx,
+			e2e.FeePayerPrivateKey,
+			e2e.Wallet1PrivateKey,
+		)
+		require.NoError(t, err)
+		fmt.Println("tx:", txHash, "status:", txStatus)
+		require.NotEmpty(t, txHash)
+		require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+
+		// Use NFT
+		t.Run("Try to use NFT by wallet 2", func(t *testing.T) {
+			tx, err := transaction.NewTransactionBuilder(sc).
+				SetFeePayer(e2e.FeePayerPubkey).
+				AddInstruction(instructions.UseToken(instructions.UseTokenParams{
+					FeePayer:     e2e.FeePayerPubkey,
+					Mint:         mint.PublicKey,
+					MintOwner:    e2e.Wallet1Pubkey,
+					UseAuthority: e2e.Wallet2Pubkey,
+				})).
+				Build(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, tx)
+
+			txHash, txStatus, err := e2e.SignAndSendTransaction(
+				ctx, sc, tx,
+				e2e.FeePayerPrivateKey,
+				e2e.Wallet2PrivateKey,
+			)
+			require.Error(t, err)
+			fmt.Println("tx:", txHash, "status:", txStatus)
+			require.Empty(t, txHash)
+			require.EqualValues(t, txStatus, types.TransactionStatusFailure)
+
+			// Check token metadata
+			t.Run("check token metadata", func(t *testing.T) {
+				metadata, err := sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+				require.NoError(t, err)
+				require.EqualValues(t, uint64(10), metadata.Uses.Total)
+				require.EqualValues(t, uint64(9), metadata.Uses.Remaining)
+			})
+		})
+	})
+
+	// Use NFT
+	t.Run("Use NFT by wallet 1", func(t *testing.T) {
+		tx, err := transaction.NewTransactionBuilder(sc).
+			SetFeePayer(e2e.FeePayerPubkey).
+			AddInstruction(instructions.UseToken(instructions.UseTokenParams{
+				FeePayer:     e2e.FeePayerPubkey,
+				Mint:         mint.PublicKey,
+				MintOwner:    e2e.Wallet1Pubkey,
+				UseAuthority: e2e.Wallet1Pubkey,
+			})).
+			Build(ctx)
+		require.NoError(t, err)
+		require.NotEmpty(t, tx)
+
+		txHash, txStatus, err := e2e.SignAndSendTransaction(
+			ctx, sc, tx,
+			e2e.FeePayerPrivateKey,
+			e2e.Wallet1PrivateKey,
+		)
+		require.NoError(t, err)
+		fmt.Println("tx:", txHash, "status:", txStatus)
+		require.NotEmpty(t, txHash)
+		require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+
+		// Check token metadata
+		t.Run("check token metadata", func(t *testing.T) {
+			metadata, err := sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+			require.NoError(t, err)
+			require.EqualValues(t, uint64(10), metadata.Uses.Total)
+			require.EqualValues(t, uint64(8), metadata.Uses.Remaining)
+		})
+
+		// Use NFT
+		t.Run("Try one more time using of NFT by wallet 1", func(t *testing.T) {
+			tx, err := transaction.NewTransactionBuilder(sc).
+				SetFeePayer(e2e.FeePayerPubkey).
+				AddInstruction(instructions.UseToken(instructions.UseTokenParams{
+					FeePayer:     e2e.FeePayerPubkey,
+					Mint:         mint.PublicKey,
+					MintOwner:    e2e.Wallet1Pubkey,
+					UseAuthority: e2e.Wallet1Pubkey,
+				})).
+				Build(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, tx)
+
+			_, txStatus, err := e2e.SignAndSendTransaction(
+				ctx, sc, tx,
+				e2e.FeePayerPrivateKey,
+				e2e.Wallet1PrivateKey,
+			)
+			require.Error(t, err)
+			require.EqualValues(t, txStatus, types.TransactionStatusFailure)
+
+			// Check token metadata
+			t.Run("check token metadata", func(t *testing.T) {
+				metadata, err := sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+				require.NoError(t, err)
+				require.EqualValues(t, uint64(10), metadata.Uses.Total)
+				require.EqualValues(t, uint64(8), metadata.Uses.Remaining)
+			})
+		})
+	})
+
+	// Use NFT
+	t.Run("Use NFT by fee payer wallet", func(t *testing.T) {
+		tx, err := transaction.NewTransactionBuilder(sc).
+			SetFeePayer(e2e.FeePayerPubkey).
+			AddInstruction(instructions.UseToken(instructions.UseTokenParams{
+				FeePayer:     e2e.FeePayerPubkey,
+				Mint:         mint.PublicKey,
+				MintOwner:    e2e.Wallet1Pubkey,
+				UseAuthority: e2e.FeePayerPubkey,
+			})).
+			Build(ctx)
+		require.NoError(t, err)
+		require.NotEmpty(t, tx)
+
+		txHash, txStatus, err := e2e.SignAndSendTransaction(
+			ctx, sc, tx,
+			e2e.FeePayerPrivateKey,
+		)
+		require.Error(t, err)
+		fmt.Println("tx:", txHash, "status:", txStatus)
+		require.Empty(t, txHash)
+		require.EqualValues(t, txStatus, types.TransactionStatusFailure)
+
+		// Check token metadata
+		t.Run("check token metadata", func(t *testing.T) {
+			metadata, err := sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+			require.NoError(t, err)
+			require.EqualValues(t, uint64(10), metadata.Uses.Total)
+			require.EqualValues(t, uint64(8), metadata.Uses.Remaining)
+		})
+
+		// Approve authority and try again
+		t.Run("Approve authority and try again", func(t *testing.T) {
+			tx, err := transaction.NewTransactionBuilder(sc).
+				SetFeePayer(e2e.FeePayerPubkey).
+				AddInstruction(instructions.ApproveUseAuthority(instructions.ApproveUseAuthorityParams{
+					FeePayer:        e2e.FeePayerPubkey,
+					Mint:            mint.PublicKey,
+					MintOwner:       e2e.Wallet1Pubkey,
+					NewUseAuthority: e2e.FeePayerPubkey,
+					NumberOfUses:    1,
+				})).
+				AddInstruction(instructions.UseToken(instructions.UseTokenParams{
+					FeePayer:     e2e.FeePayerPubkey,
+					Mint:         mint.PublicKey,
+					MintOwner:    e2e.Wallet1Pubkey,
+					UseAuthority: e2e.FeePayerPubkey,
+				})).
+				Build(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, tx)
+
+			txHash, txStatus, err := e2e.SignAndSendTransaction(
+				ctx, sc, tx,
+				e2e.FeePayerPrivateKey,
+				e2e.Wallet1PrivateKey,
+			)
+			require.NoError(t, err)
+			fmt.Println("tx:", txHash, "status:", txStatus)
+			require.NotEmpty(t, txHash)
+			require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+
+			// Check token metadata
+			t.Run("check token metadata", func(t *testing.T) {
+				metadata, err := sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+				require.NoError(t, err)
+				require.EqualValues(t, uint64(10), metadata.Uses.Total)
+				require.EqualValues(t, uint64(7), metadata.Uses.Remaining)
+			})
+		})
+	})
+
+	// Burn NFT
+	t.Run("Burn used NFT", func(t *testing.T) {
+		tx, err := transaction.NewTransactionBuilder(sc).
+			SetFeePayer(e2e.FeePayerPubkey).
+			AddInstruction(instructions.BurnNft(instructions.BurnNftParams{
+				Mint:      mint.PublicKey,
+				MintOwner: e2e.Wallet1Pubkey,
+			})).
+			Build(ctx)
+		require.NoError(t, err)
+		require.NotEmpty(t, tx)
+
+		txHash, txStatus, err := e2e.SignAndSendTransaction(ctx, sc, tx, e2e.FeePayerPrivateKey, e2e.Wallet1PrivateKey)
+		require.NoError(t, err)
+		fmt.Println("tx:", txHash, "status:", txStatus)
+		require.NotEmpty(t, txHash)
+		require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+
+		// Check token metadata
+		t.Run("check nft metadata", func(t *testing.T) {
+			_, err = sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+			require.Error(t, err)
+		})
+
+		// Check token balance
+		t.Run("check token balance", func(t *testing.T) {
+			balance, err := sc.GetTokenBalance(ctx, e2e.Wallet1Pubkey.ToBase58(), mint.PublicKey.ToBase58())
+			require.Error(t, err)
+			require.EqualValues(t, uint64(0), balance.Amount)
+		})
+	})
+}

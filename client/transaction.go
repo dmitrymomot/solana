@@ -267,11 +267,9 @@ func (c *Client) WaitForTransactionConfirmed(ctx context.Context, txhash string,
 			if err != nil {
 				return types.TransactionStatusUnknown, utils.StackErrors(ErrWaitForTransaction, err)
 			}
-
 			if status == types.TransactionStatusInProgress || status == types.TransactionStatusUnknown {
 				continue
 			}
-
 			if status == types.TransactionStatusFailure || status == types.TransactionStatusSuccess {
 				return status, nil
 			}
