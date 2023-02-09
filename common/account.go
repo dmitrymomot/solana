@@ -1,4 +1,4 @@
-package solana
+package common
 
 import (
 	"fmt"
@@ -85,6 +85,11 @@ func NewAccount() types.Account {
 	return types.NewAccount()
 }
 
+// NewAccountFromSeed creates a new Solana account from a seed
+func NewAccountFromSeed(seed []byte) (types.Account, error) {
+	return types.AccountFromSeed(seed)
+}
+
 // ToBase58 converts an Solana account to a base58 encoded string
 func AccountToBase58(a types.Account) string {
 	return base58.Encode(a.PrivateKey)
@@ -98,6 +103,24 @@ func AccountFromBase58(s string) (types.Account, error) {
 	}
 
 	return types.AccountFromBytes(b)
+}
+
+// AccountFromString creates an Solana account from a base58 encoded string.
+// Alias for AccountFromBase58
+func AccountFromString(s string) (types.Account, error) {
+	return AccountFromBase58(s)
+}
+
+// PublicKeyFromBase58 converts a base58 encoded public key to a PublicKey type
+// Alias for PublicKeyFromString
+func PublicKeyFromBase58(s string) common.PublicKey {
+	return PublicKeyFromString(s)
+}
+
+// PublicKeyFromString converts a string to a PublicKey type
+// Wrapper around the common.PublicKeyFromString function from the solana-go-sdk
+func PublicKeyFromString(s string) common.PublicKey {
+	return common.PublicKeyFromString(s)
 }
 
 // ValidateSolanaWalletAddr validates a Solana wallet address.
@@ -119,6 +142,41 @@ func ValidateSolanaWalletAddr(addr string) error {
 	return nil
 }
 
+// DeriveTokenAccount derives an associated token account from a Solana account and a mint address.
+// This is a wrapper around the FindAssociatedTokenAddress function from the solana-go-sdk.
+// base58WalletAddr is the base58 encoded address of the Solana account.
+// base58MintAddr is the base58 encoded address of the token mint.
+// The function returns the base58 encoded address of the token account or an error.
+func DeriveTokenAccount(base58WalletAddr, base58MintAddr string) (common.PublicKey, error) {
+	return DeriveTokenAccountPubkey(
+		PublicKeyFromBase58(base58WalletAddr),
+		PublicKeyFromBase58(base58MintAddr),
+	)
+}
+
+// DeriveTokenAccountPubkey derives an associated token account from a Solana account and a mint address.
+// This is a wrapper around the FindAssociatedTokenAddress function from the solana-go-sdk.
+func DeriveTokenAccountPubkey(wallet, mint common.PublicKey) (common.PublicKey, error) {
+	ata, _, err := common.FindAssociatedTokenAddress(wallet, mint)
+	if err != nil {
+		return common.PublicKey{}, utils.StackErrors(ErrDeriveTokenAccount, err)
+	}
+
+	return ata, nil
+}
+
+// DeriveTokenLockAccount derives an associated token holder account from a Solana account and a mint address.
+func DeriveTokenLockAccount(walletAddress, tokenMintAddress common.PublicKey) (common.PublicKey, error) {
+	seeds := [][]byte{}
+	seeds = append(seeds, []byte("token_holder"))
+	seeds = append(seeds, walletAddress.Bytes())
+	seeds = append(seeds, common.TokenProgramID.Bytes())
+	seeds = append(seeds, tokenMintAddress.Bytes())
+
+	pubkey, _, err := common.FindProgramAddress(seeds, common.SPLAssociatedTokenAccountProgramID)
+	return pubkey, err
+}
+
 // deriveFromMnemonicBip44 derives an Solana account from a mnemonic phrase
 // Compatible with BIP44 (phantom wallet)
 func deriveFromMnemonicBip44(mnemonic string, path int) (types.Account, error) {
@@ -138,4 +196,17 @@ func deriveFromMnemonicBip44(mnemonic string, path int) (types.Account, error) {
 	}
 
 	return account, nil
+}
+
+// FindBurnerPubkey returns the pubkey of the burner account
+func FindBurnerPubkey() (common.PublicKey, error) {
+	pubkey, _, err := common.FindProgramAddress(
+		[][]byte{
+			[]byte("metadata"),
+			common.MetaplexTokenMetaProgramID.Bytes(),
+			[]byte("burn"),
+		},
+		common.MetaplexTokenMetaProgramID,
+	)
+	return pubkey, err
 }

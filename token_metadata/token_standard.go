@@ -18,7 +18,8 @@ func (s TokenStandard) Valid() bool {
 	return s == TokenStandardNonFungible ||
 		s == TokenStandardNonFungibleEdition ||
 		s == TokenStandardFungibleAsset ||
-		s == TokenStandardFungible
+		s == TokenStandardFungible ||
+		s == TokenStandardProgrammableNonFungible
 }
 
 // ToSystemTokenStandard returns the system token standard.
@@ -26,6 +27,8 @@ func (s TokenStandard) ToSystemTokenStandard() token_metadata.TokenStandard {
 	switch s {
 	case TokenStandardNonFungible:
 		return token_metadata.NonFungible
+	case TokenStandardProgrammableNonFungible:
+		return token_metadata.ProgrammableNonFungible
 	case TokenStandardNonFungibleEdition:
 		return token_metadata.NonFungibleEdition
 	case TokenStandardFungibleAsset:
@@ -39,19 +42,21 @@ func (s TokenStandard) ToSystemTokenStandard() token_metadata.TokenStandard {
 
 // Token standards enum
 const (
-	TokenStandardUndefined          TokenStandard = "undefined"
-	TokenStandardNonFungible        TokenStandard = "non_fungible"
-	TokenStandardNonFungibleEdition TokenStandard = "non_fungible_edition"
-	TokenStandardFungibleAsset      TokenStandard = "fungible_asset"
-	TokenStandardFungible           TokenStandard = "fungible"
+	TokenStandardUndefined               TokenStandard = "undefined"
+	TokenStandardNonFungible             TokenStandard = "non_fungible"
+	TokenStandardNonFungibleEdition      TokenStandard = "non_fungible_edition"
+	TokenStandardFungibleAsset           TokenStandard = "fungible_asset"
+	TokenStandardFungible                TokenStandard = "fungible"
+	TokenStandardProgrammableNonFungible TokenStandard = "programmable_non_fungible"
 )
 
 // TokenStandardMap is a map of token_metadata.TokenStandard to TokenStandard.
 var tokenStandardsMap = map[token_metadata.TokenStandard]TokenStandard{
-	token_metadata.NonFungible:        TokenStandardNonFungible,
-	token_metadata.NonFungibleEdition: TokenStandardNonFungibleEdition,
-	token_metadata.FungibleAsset:      TokenStandardFungibleAsset,
-	token_metadata.Fungible:           TokenStandardFungible,
+	token_metadata.NonFungible:             TokenStandardNonFungible,
+	token_metadata.NonFungibleEdition:      TokenStandardNonFungibleEdition,
+	token_metadata.FungibleAsset:           TokenStandardFungibleAsset,
+	token_metadata.Fungible:                TokenStandardFungible,
+	token_metadata.ProgrammableNonFungible: TokenStandardProgrammableNonFungible,
 }
 
 // CastToTokenStandard casts token_metadata.TokenStandard to TokenStandard.

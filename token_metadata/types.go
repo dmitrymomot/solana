@@ -55,8 +55,8 @@ type (
 
 	Uses struct {
 		UseMethod string `json:"use_method"`
-		Remaining uint64 `json:"remaining"`
 		Total     uint64 `json:"total"`
+		Remaining uint64 `json:"remaining"`
 	}
 
 	Creator struct {

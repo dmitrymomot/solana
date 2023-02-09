@@ -7,7 +7,9 @@ import (
 	"strconv"
 
 	"github.com/fatih/color"
-	"github.com/solplaydev/solana"
+	"github.com/solplaydev/solana/client"
+	"github.com/solplaydev/solana/common"
+	"github.com/solplaydev/solana/types"
 	"github.com/spf13/cobra"
 )
 
@@ -28,12 +30,12 @@ var airdropCmd = &cobra.Command{
 		}
 
 		addr := args[0]
-		if err := solana.ValidateSolanaWalletAddr(addr); err != nil {
+		if err := common.ValidateSolanaWalletAddr(addr); err != nil {
 			color.Red("Invalid wallet address.")
 			return
 		}
 
-		amount := solana.SOL
+		amount := types.SOL
 		if len(args) == 2 {
 			var err error
 			amount, err = strconv.ParseUint(args[1], 10, 64)
@@ -43,7 +45,7 @@ var airdropCmd = &cobra.Command{
 			}
 		}
 
-		client := solana.New(solana.SetSolanaEndpoint(solana.SolanaDevnetRPCURL))
+		client := client.New(client.SetSolanaEndpoint(types.SolanaDevnetRPCURL))
 		tx, err := client.RequestAirdrop(cmd.Context(), addr, amount)
 		if err != nil {
 			color.Red(err.Error())

@@ -1,8 +1,9 @@
-package solana
+package client
 
 import (
 	"context"
 
+	"github.com/solplaydev/solana/common"
 	"github.com/solplaydev/solana/utils"
 )
 
@@ -13,7 +14,7 @@ func (c *Client) RequestAirdrop(ctx context.Context, base58Addr string, amount u
 		return "", ErrInvalidAirdropAmount
 	}
 
-	if err := ValidateSolanaWalletAddr(base58Addr); err != nil {
+	if err := common.ValidateSolanaWalletAddr(base58Addr); err != nil {
 		return "", utils.StackErrors(ErrRequestAirdrop, err)
 	}
 

@@ -1,9 +1,10 @@
-package solana
+package client
 
 import (
 	"net/http"
 
 	"github.com/portto/solana-go-sdk/client"
+	"github.com/solplaydev/solana/types"
 )
 
 type (
@@ -58,7 +59,7 @@ func SetHTTPClient(httpClient *http.Client) ClientOption {
 // endpoint is the endpoint of the solana RPC node
 // cnf is the configuration for the client
 func New(opts ...ClientOption) *Client {
-	c := &Client{defaultDecimals: SPLTokenDefaultDecimals}
+	c := &Client{defaultDecimals: types.SPLTokenDefaultDecimals}
 
 	for _, opt := range opts {
 		opt(c)
