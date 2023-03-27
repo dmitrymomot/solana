@@ -7,6 +7,7 @@ import (
 
 	"github.com/dmitrymomot/solana/client"
 	"github.com/dmitrymomot/solana/tests/e2e"
+	"github.com/dmitrymomot/solana/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,7 +22,7 @@ func TestGetTokensList(t *testing.T) {
 	tokensList, err := sc.GetFungibleTokensList(ctx, e2e.Wallet1Pubkey.ToBase58())
 	require.NoError(t, err)
 	require.NotEmpty(t, tokensList)
-	// fmt.Println(utils.PrettyPrint(tokensList))
+	fmt.Println(utils.PrettyPrint(tokensList))
 	// fmt.Println("total:", len(tokensList))
 
 	// get tokens metadata

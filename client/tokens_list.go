@@ -16,6 +16,12 @@ func (c *Client) GetFungibleTokensList(ctx context.Context, walletAddr string) (
 	return c.getTokensList(ctx, walletAddr, true)
 }
 
+// GetNonFungibleTokensList gets the list of non-fungible tokens for the given wallet address.
+// Result includes the list of NFTs and the list of semi-fungible tokens (assets).
+func (c *Client) GetNonFungibleTokensList(ctx context.Context, walletAddr string) ([]types.TokenAccount, error) {
+	return c.getTokensList(ctx, walletAddr, false)
+}
+
 // GetFungibleTokensList gets the list of fungible tokens for the given wallet address.
 func (c *Client) getTokensList(ctx context.Context, walletAddr string, fungible bool) ([]types.TokenAccount, error) {
 	if err := commonx.ValidateSolanaWalletAddr(walletAddr); err != nil {
