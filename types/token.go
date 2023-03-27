@@ -20,6 +20,9 @@ const (
 	// SPL token default multiplier for decimals
 	SPLTokenDefaultMultiplier uint64 = 1e9
 
+	// Wrapped SOL mint address
+	WrappedSOLMint = "So11111111111111111111111111111111111111112"
+
 	// DeprecatedTokenListPath is the default token list path
 	DeprecatedTokenListPath = "https://raw.githubusercontent.com/solana-labs/token-list/main/src/tokens/solana.tokenlist.json"
 )
