@@ -3,9 +3,9 @@ package client
 import (
 	"context"
 
-	"github.com/solplaydev/solana/common"
-	"github.com/solplaydev/solana/types"
-	"github.com/solplaydev/solana/utils"
+	"github.com/dmitrymomot/solana/common"
+	"github.com/dmitrymomot/solana/types"
+	"github.com/dmitrymomot/solana/utils"
 )
 
 // GetSOLBalance returns the SOL balance of the given base58 encoded account address.
@@ -15,7 +15,7 @@ func (c *Client) GetSOLBalance(ctx context.Context, base58Addr string) (uint64, 
 		return 0, utils.StackErrors(ErrGetSolBalance, err)
 	}
 
-	balance, err := c.solana.GetBalance(ctx, base58Addr)
+	balance, err := c.rpcClient.GetBalance(ctx, base58Addr)
 	if err != nil {
 		return 0, utils.StackErrors(ErrGetSolBalance, err)
 	}
@@ -47,7 +47,7 @@ func (c *Client) GetTokenBalance(ctx context.Context, base58Addr, base58MintAddr
 // base58Addr is the base58 encoded associated token account address.
 // Returns the balance in lamports and token decimals, or an error.
 func (c *Client) GetAtaBalance(ctx context.Context, base58Addr string) (types.TokenAmount, error) {
-	balance, err := c.solana.GetTokenAccountBalance(ctx, base58Addr)
+	balance, err := c.rpcClient.GetTokenAccountBalance(ctx, base58Addr)
 	if err != nil {
 		return types.TokenAmount{}, utils.StackErrors(ErrGetAtaBalance, ErrGetSplTokenBalance, err)
 	}

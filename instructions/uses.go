@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	commonx "github.com/dmitrymomot/solana/common"
+	"github.com/dmitrymomot/solana/token_metadata"
 	"github.com/portto/solana-go-sdk/common"
 	metaplex_token_metadata "github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/portto/solana-go-sdk/types"
-	commonx "github.com/solplaydev/solana/common"
-	"github.com/solplaydev/solana/token_metadata"
 )
 
 // ApproveUseAuthorityParams are the parameters for the ApproveUseAuthority instruction.

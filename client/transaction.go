@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dmitrymomot/solana/types"
+	"github.com/dmitrymomot/solana/utils"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/system"
 	sdktypes "github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/types"
-	"github.com/solplaydev/solana/utils"
 )
 
 // NewTransactionParams is the params for NewTransaction function.
@@ -23,7 +23,7 @@ type NewTransactionParams struct {
 // NewTransaction creates a new transaction.
 // Returns the transaction or an error.
 func (c *Client) NewTransaction(ctx context.Context, params NewTransactionParams) (string, error) {
-	latestBlockhash, err := c.solana.GetLatestBlockhash(ctx)
+	latestBlockhash, err := c.rpcClient.GetLatestBlockhash(ctx)
 	if err != nil {
 		return "", utils.StackErrors(
 			ErrNewTransaction,
@@ -68,7 +68,7 @@ type NewDurableTransactionParams struct {
 // NewDurableTransaction creates a new durable transaction.
 // Returns the serialized transaction or an error.
 func (c *Client) NewDurableTransaction(ctx context.Context, params NewDurableTransactionParams) (string, error) {
-	nonce, err := c.solana.GetNonceFromNonceAccount(ctx, params.DurableNonce.ToBase58())
+	nonce, err := c.rpcClient.GetNonceFromNonceAccount(ctx, params.DurableNonce.ToBase58())
 	if err != nil {
 		return "", utils.StackErrors(
 			ErrNewDurableTransaction,
@@ -137,7 +137,7 @@ func (c *Client) GetTransactionFee(ctx context.Context, txSource string) (uint64
 		return 0, utils.StackErrors(ErrGetTransactionFee, ErrDeserializeTransaction, err)
 	}
 
-	fee, err := c.solana.GetFeeForMessage(ctx, tx.Message)
+	fee, err := c.rpcClient.GetFeeForMessage(ctx, tx.Message)
 	if err != nil {
 		return 0, utils.StackErrors(ErrGetTransactionFee, err)
 	}
@@ -193,7 +193,7 @@ func (c *Client) SendTransaction(ctx context.Context, txSource string, i ...uint
 		return "", utils.StackErrors(ErrSendTransaction, ErrDeserializeTransaction, err)
 	}
 
-	txhash, err := c.solana.SendTransaction(ctx, tx)
+	txhash, err := c.rpcClient.SendTransaction(ctx, tx)
 	if err != nil {
 		if strings.Contains(err.Error(), "without insufficient funds for rent") {
 			return "", utils.StackErrors(ErrSendTransaction, ErrWithoutInsufficientFound, err)
@@ -213,7 +213,7 @@ func (c *Client) SendTransaction(ctx context.Context, txSource string, i ...uint
 // GetTransactionStatus gets the transaction status.
 // Returns the transaction status or an error.
 func (c *Client) GetTransactionStatus(ctx context.Context, txhash string) (types.TransactionStatus, error) {
-	status, err := c.solana.GetSignatureStatus(ctx, txhash)
+	status, err := c.rpcClient.GetSignatureStatus(ctx, txhash)
 	if err != nil {
 		return types.TransactionStatusUnknown, utils.StackErrors(ErrGetTransactionStatus, err)
 	}
@@ -238,7 +238,7 @@ func (c *Client) GetTransactionStatus(ctx context.Context, txhash string) (types
 // GetMinimumBalanceForRentExemption gets the minimum balance for rent exemption.
 // Returns the minimum balance in lamports or an error.
 func (c *Client) GetMinimumBalanceForRentExemption(ctx context.Context, size uint64) (uint64, error) {
-	mintAccountRent, err := c.solana.GetMinimumBalanceForRentExemption(ctx, size)
+	mintAccountRent, err := c.rpcClient.GetMinimumBalanceForRentExemption(ctx, size)
 	if err != nil {
 		return 0, utils.StackErrors(ErrGetMinimumBalanceForRentExemption, err)
 	}

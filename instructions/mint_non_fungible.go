@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dmitrymomot/solana/metadata"
+	"github.com/dmitrymomot/solana/token_metadata"
+	"github.com/dmitrymomot/solana/utils"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/associated_token_account"
 	metaplex_token_metadata "github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/portto/solana-go-sdk/program/system"
 	"github.com/portto/solana-go-sdk/program/token"
 	"github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/metadata"
-	"github.com/solplaydev/solana/token_metadata"
-	"github.com/solplaydev/solana/utils"
 )
 
 // MintNonFungibleParam defines the parameters for the MintNonFungible instruction.

@@ -3,16 +3,17 @@ package client
 import (
 	"net/http"
 
+	"github.com/dmitrymomot/solana/types"
 	"github.com/portto/solana-go-sdk/client"
-	"github.com/solplaydev/solana/types"
 )
 
 type (
 	// Solana client wrapper
 	Client struct {
-		solana          *client.Client
+		rpcClient       *client.Client
 		http            *http.Client
 		defaultDecimals uint8
+		tokenListPath   string
 	}
 
 	ClientOption func(*Client)
@@ -21,10 +22,10 @@ type (
 // WithCustomSolanaClient sets a custom solana client
 func WithCustomSolanaClient(solana *client.Client) ClientOption {
 	return func(c *Client) {
-		if c.solana != nil {
+		if c.rpcClient != nil {
 			panic("solana client is already set")
 		}
-		c.solana = solana
+		c.rpcClient = solana
 	}
 }
 
@@ -38,10 +39,10 @@ func WithCustomDecimals(decimals uint8) ClientOption {
 // SetSolanaEndpoint sets the solana endpoint
 func SetSolanaEndpoint(endpoint string) ClientOption {
 	return func(c *Client) {
-		if c.solana != nil {
+		if c.rpcClient != nil {
 			panic("solana client is already set")
 		}
-		c.solana = client.NewClient(endpoint)
+		c.rpcClient = client.NewClient(endpoint)
 	}
 }
 
@@ -55,6 +56,16 @@ func SetHTTPClient(httpClient *http.Client) ClientOption {
 	}
 }
 
+// SetTokenListPath sets the token list path
+func SetTokenListPath(path string) ClientOption {
+	return func(c *Client) {
+		if c.tokenListPath != "" {
+			panic("token list path is already set")
+		}
+		c.tokenListPath = path
+	}
+}
+
 // NewClient creates a new client
 // endpoint is the endpoint of the solana RPC node
 // cnf is the configuration for the client
@@ -65,7 +76,7 @@ func New(opts ...ClientOption) *Client {
 		opt(c)
 	}
 
-	if c.solana == nil {
+	if c.rpcClient == nil {
 		panic("missing solana client")
 	}
 
@@ -78,7 +89,7 @@ func New(opts ...ClientOption) *Client {
 
 // Solana returns the solana client
 func (c *Client) Solana() *client.Client {
-	return c.solana
+	return c.rpcClient
 }
 
 // DefaultDecimals returns the default decimals

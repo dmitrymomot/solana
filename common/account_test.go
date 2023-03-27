@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/dmitrymomot/solana/common"
 	"github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/common"
 	"github.com/stretchr/testify/require"
 )
 

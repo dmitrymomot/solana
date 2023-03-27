@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dmitrymomot/solana/client"
+	"github.com/dmitrymomot/solana/instructions"
+	"github.com/dmitrymomot/solana/token_metadata"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/token"
 	"github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/client"
-	"github.com/solplaydev/solana/instructions"
-	"github.com/solplaydev/solana/token_metadata"
 )
 
 type (

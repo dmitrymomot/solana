@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/dmitrymomot/solana/client"
+	"github.com/dmitrymomot/solana/common"
+	"github.com/dmitrymomot/solana/instructions"
+	"github.com/dmitrymomot/solana/tests/e2e"
+	"github.com/dmitrymomot/solana/token_metadata"
+	"github.com/dmitrymomot/solana/transaction"
+	"github.com/dmitrymomot/solana/types"
 	"github.com/portto/solana-go-sdk/program/token"
-	"github.com/solplaydev/solana/client"
-	"github.com/solplaydev/solana/common"
-	"github.com/solplaydev/solana/instructions"
-	"github.com/solplaydev/solana/tests/e2e"
-	"github.com/solplaydev/solana/token_metadata"
-	"github.com/solplaydev/solana/transaction"
-	"github.com/solplaydev/solana/types"
 	"github.com/stretchr/testify/require"
 )
 

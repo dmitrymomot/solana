@@ -1,4 +1,4 @@
-module github.com/solplaydev/solana
+module github.com/dmitrymomot/solana
 
 go 1.19
 

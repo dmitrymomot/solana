@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dmitrymomot/solana/token_metadata"
+	"github.com/dmitrymomot/solana/utils"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/associated_token_account"
 	metaplex_token_metadata "github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/portto/solana-go-sdk/program/system"
 	"github.com/portto/solana-go-sdk/program/token"
 	"github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/token_metadata"
-	"github.com/solplaydev/solana/utils"
 )
 
 // MintNonFungibleEditionParam defines the parameters for the MintNonFungibleEdition instruction.

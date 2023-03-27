@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"filippo.io/edwards25519"
+	"github.com/dmitrymomot/solana/utils"
 	"github.com/mr-tron/base58"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/pkg/hdwallet"
 	"github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/utils"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -126,6 +126,10 @@ func PublicKeyFromString(s string) common.PublicKey {
 // ValidateSolanaWalletAddr validates a Solana wallet address.
 // Returns an error if the address is invalid, nil otherwise.
 func ValidateSolanaWalletAddr(addr string) error {
+	if addr == "" {
+		return ErrInvalidWalletAddress
+	}
+
 	d, err := base58.Decode(addr)
 	if err != nil {
 		return utils.StackErrors(ErrInvalidPublicKey, err)

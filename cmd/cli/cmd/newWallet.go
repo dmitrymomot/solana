@@ -6,8 +6,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/dmitrymomot/solana/common"
 	"github.com/fatih/color"
-	"github.com/solplaydev/solana/common"
 	"github.com/spf13/cobra"
 )
 

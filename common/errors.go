@@ -17,4 +17,5 @@ var (
 	ErrDeriveAccountsListFromMnemonicBip44 = errors.New("failed to derive accounts list from mnemonic bip44")
 	ErrDeriveAccountFromMnemonicBip39      = errors.New("failed to derive account from mnemonic bip39")
 	ErrDeriveTokenAccount                  = errors.New("failed to derive associated token account")
+	ErrInvalidWalletAddress                = errors.New("invalid wallet address: must be a base58 encoded public key")
 )

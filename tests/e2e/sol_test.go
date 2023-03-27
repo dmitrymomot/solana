@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/dmitrymomot/solana/client"
+	"github.com/dmitrymomot/solana/instructions"
+	"github.com/dmitrymomot/solana/tests/e2e"
+	"github.com/dmitrymomot/solana/transaction"
+	typesx "github.com/dmitrymomot/solana/types"
 	"github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/client"
-	"github.com/solplaydev/solana/instructions"
-	"github.com/solplaydev/solana/tests/e2e"
-	"github.com/solplaydev/solana/transaction"
-	typesx "github.com/solplaydev/solana/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

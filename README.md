@@ -1,13 +1,13 @@
-# solplaydev/solana
+# dmitrymomot/solana
 
 Golang wrapper for Solana RPC
 
-[![Tests](https://github.com/solplaydev/solana/actions/workflows/tests.yml/badge.svg)](https://github.com/solplaydev/solana/actions/workflows/tests.yml)
+[![Tests](https://github.com/dmitrymomot/solana/actions/workflows/tests.yml/badge.svg)](https://github.com/dmitrymomot/solana/actions/workflows/tests.yml)
 
 ## Installation
 
 ```bash
-go get github.com/solplaydev/solana
+go get github.com/dmitrymomot/solana
 ```
 
 ## License

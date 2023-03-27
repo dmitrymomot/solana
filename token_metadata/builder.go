@@ -3,11 +3,11 @@ package token_metadata
 import (
 	"fmt"
 
+	"github.com/dmitrymomot/solana/metadata"
+	"github.com/dmitrymomot/solana/utils"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/metadata"
-	"github.com/solplaydev/solana/utils"
 )
 
 // TokenMetadataInstructionBuilder is a builder for token metadata instructions

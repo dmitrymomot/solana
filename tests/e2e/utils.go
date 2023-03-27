@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/solplaydev/solana/client"
-	"github.com/solplaydev/solana/common"
-	"github.com/solplaydev/solana/types"
+	"github.com/dmitrymomot/solana/client"
+	"github.com/dmitrymomot/solana/common"
+	"github.com/dmitrymomot/solana/types"
 )
 
 // SignAndSendTransaction signs a transaction by the fee payer and the wallet1 and sends it.

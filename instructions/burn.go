@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/dmitrymomot/solana/token_metadata"
 	"github.com/portto/solana-go-sdk/common"
 	metaplex_token_metadata "github.com/portto/solana-go-sdk/program/metaplex/token_metadata"
 	"github.com/portto/solana-go-sdk/program/token"
 	"github.com/portto/solana-go-sdk/types"
-	"github.com/solplaydev/solana/token_metadata"
 )
 
 // BurnNftParams are the parameters for the BurnNft instruction.

@@ -6,10 +6,10 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/dmitrymomot/solana/client"
+	"github.com/dmitrymomot/solana/common"
+	"github.com/dmitrymomot/solana/types"
 	"github.com/fatih/color"
-	"github.com/solplaydev/solana/client"
-	"github.com/solplaydev/solana/common"
-	"github.com/solplaydev/solana/types"
 	"github.com/spf13/cobra"
 )
 
