@@ -84,6 +84,10 @@ func New(opts ...ClientOption) *Client {
 		c.http = http.DefaultClient
 	}
 
+	if c.tokenListPath == "" {
+		c.tokenListPath = types.DeprecatedTokenListPath
+	}
+
 	return c
 }
 
