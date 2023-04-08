@@ -11,10 +11,10 @@ import (
 
 // TransferTokenParam defines the parameters for transferring tokens.
 type TransferTokenParam struct {
-	Mint      common.PublicKey // required; The token mint to send
-	Amount    uint64           // required; The amount of tokens to send (in token minimal units)
 	Sender    common.PublicKey // required if SenderAta is empty; The wallet to send tokens from
 	Recipient common.PublicKey // required if RecipientAta is empty; The wallet to send tokens to
+	Mint      common.PublicKey // required; The token mint to send
+	Amount    uint64           // required; The amount of tokens to send (in token minimal units)
 }
 
 // Validate validates the parameters.

@@ -101,112 +101,137 @@ func UpdateMetadata(params UpdateMetadataParams) InstructionFunc {
 					}
 					return nil
 				}(),
-				Data: func() *metaplex_token_metadata.DataV2 {
-					if params.MetadataUri != nil ||
-						params.SellerFeeBasisPoints != nil ||
-						params.Creators != nil ||
-						params.Collection != nil ||
-						params.UseMethod != nil {
-
-						var (
-							name   = oldMetadata.Data.Name
-							symbol = oldMetadata.Data.Symbol
-						)
-						if params.MetadataUri != nil {
-							metadata, _ := metadata.MetadataFromURI(*params.MetadataUri)
-							if metadata != nil {
-								name = metadata.Name
-								symbol = metadata.Symbol
-							}
-						}
-
-						return &metaplex_token_metadata.DataV2{
-							Name:   name,
-							Symbol: symbol,
-							Uri: func() string {
-								if params.MetadataUri != nil {
-									return *params.MetadataUri
-								}
-								return oldMetadata.MetadataUri
-							}(),
-							SellerFeeBasisPoints: func() uint16 {
-								if params.SellerFeeBasisPoints != nil {
-									return *params.SellerFeeBasisPoints
-								}
-								return oldMetadata.SellerFeeBasisPoints
-							}(),
-							Creators: func() *[]metaplex_token_metadata.Creator {
-								if params.Creators != nil && len(*params.Creators) > 0 {
-									creators := make([]metaplex_token_metadata.Creator, 0, len(*params.Creators))
-									for _, creator := range *params.Creators {
-										creators = append(creators, metaplex_token_metadata.Creator{
-											Address: creator.Address,
-											Share:   creator.Share,
-											Verified: func() bool {
-												return creator.Address.ToBase58() == params.UpdateAuthority.ToBase58()
-											}(),
-										})
-									}
-									return &creators
-								} else if len(oldMetadata.Creators) > 0 {
-									creators := make([]metaplex_token_metadata.Creator, 0, len(oldMetadata.Creators))
-									for _, creator := range oldMetadata.Creators {
-										creators = append(creators, metaplex_token_metadata.Creator{
-											Address:  common.PublicKeyFromString(creator.Address),
-											Share:    creator.Share,
-											Verified: creator.Verified,
-										})
-									}
-									return &creators
-								}
-								return nil
-							}(),
-							Collection: func() *metaplex_token_metadata.Collection {
-								if params.Collection != nil {
-									return &metaplex_token_metadata.Collection{
-										Key: *params.Collection,
-									}
-								} else if oldMetadata.Collection != nil {
-									return &metaplex_token_metadata.Collection{
-										Key:      common.PublicKeyFromString(oldMetadata.Collection.Key),
-										Verified: oldMetadata.Collection.Verified,
-									}
-								}
-								return nil
-							}(),
-							Uses: func() *metaplex_token_metadata.Uses {
-								if params.UseMethod != nil {
-									if params.UseLimit == nil || *params.UseLimit == 0 {
-										params.UseLimit = utils.Pointer[uint64](1)
-									}
-									if params.UseRemaining == nil || *params.UseRemaining == 0 {
-										params.UseRemaining = params.UseLimit
-									}
-									return &metaplex_token_metadata.Uses{
-										UseMethod: params.UseMethod.ToMetadataUseMethod(),
-										Remaining: *params.UseRemaining,
-										Total:     *params.UseLimit,
-									}
-								} else if oldMetadata.Uses != nil {
-									useMethod := token_metadata.TokenUseMethod(oldMetadata.Uses.UseMethod)
-									if useMethod.Valid() {
-										return &metaplex_token_metadata.Uses{
-											UseMethod: useMethod.ToMetadataUseMethod(),
-											Remaining: oldMetadata.Uses.Remaining,
-											Total:     oldMetadata.Uses.Total,
-										}
-									}
-								}
-								return nil
-							}(),
-						}
-					}
-
-					return nil
-				}(),
+				Data: getDataParam(oldMetadata, params),
 			}),
 		}
 
 		return instructions, nil
 	}
+}
+
+// get creators param to update metadata
+func getCreatorsParam(oldMetadata *token_metadata.Metadata, params UpdateMetadataParams) *[]metaplex_token_metadata.Creator {
+	// if creators param is not empty, use it
+	if params.Creators != nil && len(*params.Creators) > 0 {
+		creators := make([]metaplex_token_metadata.Creator, 0, len(*params.Creators))
+		for _, creator := range *params.Creators {
+			creators = append(creators, metaplex_token_metadata.Creator{
+				Address: creator.Address,
+				Share:   creator.Share,
+				Verified: func() bool {
+					return creator.Address.ToBase58() == params.UpdateAuthority.ToBase58()
+				}(),
+			})
+		}
+		return &creators
+	}
+
+	// if creators param is empty, use old metadata creators
+	if len(oldMetadata.Creators) > 0 {
+		creators := make([]metaplex_token_metadata.Creator, 0, len(oldMetadata.Creators))
+		for _, creator := range oldMetadata.Creators {
+			creators = append(creators, metaplex_token_metadata.Creator{
+				Address:  common.PublicKeyFromString(creator.Address),
+				Share:    creator.Share,
+				Verified: creator.Verified,
+			})
+		}
+		return &creators
+	}
+
+	return nil
+}
+
+// get collection param to update metadata
+func getCollectionParam(oldMetadata *token_metadata.Metadata, params UpdateMetadataParams) *metaplex_token_metadata.Collection {
+	if params.Collection != nil {
+		return &metaplex_token_metadata.Collection{
+			Verified: false,
+			Key:      *params.Collection,
+		}
+	}
+
+	if oldMetadata.Collection != nil {
+		return &metaplex_token_metadata.Collection{
+			Key:      common.PublicKeyFromString(oldMetadata.Collection.Key),
+			Verified: oldMetadata.Collection.Verified,
+		}
+	}
+
+	return nil
+}
+
+// get uses param to update metadata
+func getUsesParam(oldMetadata *token_metadata.Metadata, params UpdateMetadataParams) *metaplex_token_metadata.Uses {
+	if params.UseMethod != nil {
+		if params.UseLimit == nil || *params.UseLimit == 0 {
+			params.UseLimit = utils.Pointer[uint64](1)
+		}
+		if params.UseRemaining == nil || *params.UseRemaining == 0 {
+			params.UseRemaining = params.UseLimit
+		}
+
+		return &metaplex_token_metadata.Uses{
+			UseMethod: params.UseMethod.ToMetadataUseMethod(),
+			Remaining: *params.UseRemaining,
+			Total:     *params.UseLimit,
+		}
+	}
+
+	if oldMetadata.Uses != nil {
+		useMethod := token_metadata.TokenUseMethod(oldMetadata.Uses.UseMethod)
+		if useMethod.Valid() {
+			return &metaplex_token_metadata.Uses{
+				UseMethod: useMethod.ToMetadataUseMethod(),
+				Remaining: oldMetadata.Uses.Remaining,
+				Total:     oldMetadata.Uses.Total,
+			}
+		}
+	}
+
+	return nil
+}
+
+// get data param to update metadata
+func getDataParam(oldMetadata *token_metadata.Metadata, params UpdateMetadataParams) *metaplex_token_metadata.DataV2 {
+	if params.MetadataUri != nil ||
+		params.SellerFeeBasisPoints != nil ||
+		params.Creators != nil ||
+		params.Collection != nil ||
+		params.UseMethod != nil {
+
+		var (
+			name   = oldMetadata.Data.Name
+			symbol = oldMetadata.Data.Symbol
+		)
+		if params.MetadataUri != nil {
+			metadata, _ := metadata.MetadataFromURI(*params.MetadataUri)
+			if metadata != nil {
+				name = metadata.Name
+				symbol = metadata.Symbol
+			}
+		}
+
+		return &metaplex_token_metadata.DataV2{
+			Name:   name,
+			Symbol: symbol,
+			Uri: func() string {
+				if params.MetadataUri != nil {
+					return *params.MetadataUri
+				}
+				return oldMetadata.MetadataUri
+			}(),
+			SellerFeeBasisPoints: func() uint16 {
+				if params.SellerFeeBasisPoints != nil {
+					return *params.SellerFeeBasisPoints
+				}
+				return oldMetadata.SellerFeeBasisPoints
+			}(),
+			Creators:   getCreatorsParam(oldMetadata, params),
+			Collection: getCollectionParam(oldMetadata, params),
+			Uses:       getUsesParam(oldMetadata, params),
+		}
+	}
+
+	return nil
 }

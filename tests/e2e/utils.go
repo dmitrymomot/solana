@@ -15,6 +15,7 @@ func SignAndSendTransaction(ctx context.Context, client *client.Client, tx strin
 	if tx == "" {
 		return "", types.TransactionStatusUnknown, fmt.Errorf("empty transaction")
 	}
+
 	if len(signers) > 0 {
 		for _, signer := range signers {
 			if signer == "" {
