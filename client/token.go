@@ -104,7 +104,7 @@ func (c *Client) GetTokenMetadata(ctx context.Context, base58MintAddr string) (*
 		return nil, utils.StackErrors(ErrGetTokenMetadata, err)
 	}
 
-	// log.Println(utils.PrettyPrint(metadataAccountInfo))
+	// utils.PrettyPrint(metadataAccountInfo)
 
 	metadata, err := token_metadata.DeserializeMetadata(metadataAccountInfo.Data)
 	if err != nil {

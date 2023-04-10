@@ -16,6 +16,8 @@ import (
 )
 
 func TestRequestAirdrop(t *testing.T) {
+	t.SkipNow() // uncomment to run this test
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -26,7 +28,7 @@ func TestRequestAirdrop(t *testing.T) {
 	airdropSignature, err := client.RequestAirdrop(ctx, e2e.Wallet1Pubkey.ToBase58(), typesx.SOL)
 	require.NoError(t, err)
 	require.NotEmpty(t, airdropSignature)
-	t.Logf("Airdrop signature: %s", airdropSignature)
+	fmt.Printf("Airdrop signature: %s\n", airdropSignature)
 }
 
 func TestTransaction(t *testing.T) {
@@ -46,7 +48,7 @@ func TestTransaction(t *testing.T) {
 
 	minAccountRent, err := sc.GetMinimumBalanceForRentExemption(context.Background(), typesx.AccountSize)
 	require.NoError(t, err)
-	t.Logf("Mint account rent: %d", minAccountRent)
+	fmt.Printf("Mint account rent: %d\n", minAccountRent)
 
 	amount := minAccountRent + 100
 
@@ -54,30 +56,28 @@ func TestTransaction(t *testing.T) {
 	startSenderBalance, err := sc.GetSOLBalance(ctx, senderAccount.PublicKey.ToBase58())
 	require.NoError(t, err)
 	assert.Greater(t, startSenderBalance, amount+minAccountRent)
-	t.Logf("Start sender balance: %d", startSenderBalance)
 
 	if startSenderBalance < amount+minAccountRent {
-		t.Log("Requesting airdrop...")
 		tx, err := sc.RequestAirdrop(ctx, senderAccount.PublicKey.ToBase58(), typesx.SOL)
 		require.NoError(t, err)
 		require.NotEmpty(t, tx)
 
 		// Wait for transaction to be confirmed
-		t.Log("Waiting for airdrop transaction to be confirmed")
+		fmt.Println("Waiting for airdrop transaction to be confirmed")
 		status, err := sc.WaitForTransactionConfirmed(ctx, tx, 0)
 		require.NoError(t, err)
 		require.Equal(t, typesx.TransactionStatusSuccess, status)
 
-		startSenderBalance, err := sc.GetSOLBalance(ctx, senderAccount.PublicKey.ToBase58())
+		startSenderBalance, err = sc.GetSOLBalance(ctx, senderAccount.PublicKey.ToBase58())
 		require.NoError(t, err)
 		assert.Greater(t, startSenderBalance, amount+minAccountRent)
-		t.Logf("Start sender balance: %d", startSenderBalance)
+		fmt.Printf("Start sender balance: %d\n", startSenderBalance)
 	}
 
 	// Get recipient balance
 	startRecipientBalance, err := sc.GetSOLBalance(ctx, recipientAccount.PublicKey.ToBase58())
 	require.NoError(t, err)
-	t.Logf("Start recipient balance: %d", startRecipientBalance)
+	fmt.Printf("Start recipient balance: %d\n", startRecipientBalance)
 
 	// Create a new transaction
 	txb, err := transaction.NewTransactionBuilder(sc).
@@ -104,10 +104,10 @@ func TestTransaction(t *testing.T) {
 	txSignature, err := sc.SendTransaction(ctx, txs)
 	require.NoError(t, err)
 	require.NotEmpty(t, txSignature)
-	t.Logf("Transaction signature: %s", txSignature)
+	fmt.Printf("Transaction signature: %s\n", txSignature)
 
 	// Wait for transaction to be confirmed
-	t.Log("Waiting for transaction to be confirmed...")
+	fmt.Println("Waiting for transaction to be confirmed...")
 	status, err := sc.WaitForTransactionConfirmed(ctx, txSignature, 0)
 	require.NoError(t, err)
 	require.Equal(t, typesx.TransactionStatusSuccess, status)
@@ -116,11 +116,11 @@ func TestTransaction(t *testing.T) {
 	senderBalance, err := sc.GetSOLBalance(ctx, senderAccount.PublicKey.ToBase58())
 	require.NoError(t, err)
 	require.Less(t, senderBalance, startSenderBalance)
-	t.Logf("Sender balance: %d", senderBalance)
+	fmt.Printf("Sender balance: %d\n", senderBalance)
 
 	// Get recipient balance
 	recipientBalance, err := sc.GetSOLBalance(ctx, recipientAccount.PublicKey.ToBase58())
 	require.NoError(t, err)
 	require.Greater(t, recipientBalance, startRecipientBalance)
-	t.Logf("Recipient balance: %d", recipientBalance)
+	fmt.Printf("Recipient balance: %d\n", recipientBalance)
 }

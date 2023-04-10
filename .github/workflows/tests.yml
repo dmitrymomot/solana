@@ -25,5 +25,17 @@ jobs:
         with:
           go-version: 1.19
 
+      - name: Install dependencies
+        run: go mod download -x
+
+      # - name: Run tests
+      #   run: go test -p 1 -count=1 -race -cover ./client/ ./common/ ./instructions/ ./metadata/ ./token_metadata/ ./transaction/ ./types/ ./utils/
       - name: Run tests
-        run: go test -p 1 -count=1 -race -cover ./client/ ./common/ ./instructions/ ./metadata/ ./token_metadata/ ./transaction/ ./types/ ./utils/
+        env:
+          SOLANA_RPC_ENDPOINT: ${{ secrets.SOLANA_RPC_ENDPOINT }}
+          # SOLANA_WSS_ENDPOINT: ${{ secrets.SOLANA_WSS_ENDPOINT }}
+          FEE_PAYER_PRIVATE_KEY: ${{ secrets.FEE_PAYER_PRIVATE_KEY }}
+          WALLET_1_PRIVATE_KEY: ${{ secrets.WALLET_1_PRIVATE_KEY }}
+          WALLET_2_PRIVATE_KEY: ${{ secrets.WALLET_2_PRIVATE_KEY }}
+          COLLECTION_PRIVATE_KEY: ${{ secrets.COLLECTION_PRIVATE_KEY }}
+        run: go test -v -p 1 -count=1 -race -cover ./...

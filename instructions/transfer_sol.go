@@ -11,9 +11,10 @@ import (
 
 // TransferSOLParams defines the parameters for transferring SOL.
 type TransferSOLParams struct {
-	Sender    common.PublicKey // required; The wallet to send SOL from
-	Recipient common.PublicKey // required; The wallet to send SOL to
-	Amount    uint64           // required; The amount of SOL to send (in lamports)
+	Sender    common.PublicKey  // required; The wallet to send SOL from
+	Recipient common.PublicKey  // required; The wallet to send SOL to
+	Amount    uint64            // required; The amount of SOL to send (in lamports)
+	Reference *common.PublicKey // optional; public key to use as a reference for the transaction.
 }
 
 // TransferSOL transfers SOL from one wallet to another.
@@ -30,12 +31,20 @@ func TransferSOL(params TransferSOLParams) InstructionFunc {
 			return nil, fmt.Errorf("amount must be greater than 0")
 		}
 
-		return []types.Instruction{
-			system.Transfer(system.TransferParam{
-				From:   params.Sender,
-				To:     params.Recipient,
-				Amount: params.Amount,
-			}),
-		}, nil
+		instruction := system.Transfer(system.TransferParam{
+			From:   params.Sender,
+			To:     params.Recipient,
+			Amount: params.Amount,
+		})
+
+		if params.Reference != nil && *params.Reference != (common.PublicKey{}) {
+			instruction.Accounts = append(instruction.Accounts, types.AccountMeta{
+				PubKey:     *params.Reference,
+				IsSigner:   false,
+				IsWritable: false,
+			})
+		}
+
+		return []types.Instruction{instruction}, nil
 	}
 }

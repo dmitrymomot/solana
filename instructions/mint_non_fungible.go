@@ -87,28 +87,24 @@ func MintNonFungible(params MintNonFungibleParam) InstructionFunc {
 			Symbol:               params.TokenSymbol,
 			Uri:                  params.MetadataURI,
 			SellerFeeBasisPoints: params.SellerFeeBasisPoints,
-			Collection: func() *metaplex_token_metadata.Collection {
-				if params.Collection != nil {
-					return &metaplex_token_metadata.Collection{
-						Key: *params.Collection,
-					}
-				}
-				return nil
-			}(),
-			Uses: func() *metaplex_token_metadata.Uses {
-				if params.UseMethod != nil {
-					if params.UseLimit == nil || *params.UseLimit == 0 ||
-						*params.UseMethod == token_metadata.TokenUseMethodSingle {
-						params.UseLimit = utils.Pointer[uint64](1)
-					}
-					return &metaplex_token_metadata.Uses{
-						UseMethod: params.UseMethod.ToMetadataUseMethod(),
-						Remaining: *params.UseLimit,
-						Total:     *params.UseLimit,
-					}
-				}
-				return nil
-			}(),
+		}
+
+		if params.Collection != nil {
+			metadataV2.Collection = &metaplex_token_metadata.Collection{
+				Key: *params.Collection,
+			}
+		}
+
+		if params.UseMethod != nil {
+			if params.UseLimit == nil || *params.UseLimit == 0 ||
+				*params.UseMethod == token_metadata.TokenUseMethodSingle {
+				params.UseLimit = utils.Pointer[uint64](1)
+			}
+			metadataV2.Uses = &metaplex_token_metadata.Uses{
+				UseMethod: params.UseMethod.ToMetadataUseMethod(),
+				Remaining: *params.UseLimit,
+				Total:     *params.UseLimit,
+			}
 		}
 
 		if params.MetadataURI != "" {
