@@ -163,8 +163,6 @@ func TestNFT(t *testing.T) {
 		})
 	})
 
-	t.SkipNow()
-
 	// Transfer NFT
 	t.Run("Transfer NFT", func(t *testing.T) {
 		tx, err := transaction.NewTransactionBuilder(sc).
