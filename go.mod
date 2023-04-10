@@ -12,7 +12,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0
 	github.com/near/borsh-go v0.3.2-0.20220516180422-1ff87d108454
 	github.com/pkg/errors v0.9.1
-	github.com/portto/solana-go-sdk v1.23.6
+	github.com/portto/solana-go-sdk v1.23.7
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.2
 	github.com/tyler-smith/go-bip39 v1.1.0
@@ -61,4 +61,4 @@ require (
 	gorm.io/gorm v1.24.6 // indirect
 )
 
-replace github.com/portto/solana-go-sdk => github.com/dmitrymomot/solana-go-sdk v1.23.6
+replace github.com/portto/solana-go-sdk => github.com/dmitrymomot/solana-go-sdk v1.23.7
