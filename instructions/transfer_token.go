@@ -11,10 +11,11 @@ import (
 
 // TransferTokenParam defines the parameters for transferring tokens.
 type TransferTokenParam struct {
-	Sender    common.PublicKey // required if SenderAta is empty; The wallet to send tokens from
-	Recipient common.PublicKey // required if RecipientAta is empty; The wallet to send tokens to
-	Mint      common.PublicKey // required; The token mint to send
-	Amount    uint64           // required; The amount of tokens to send (in token minimal units)
+	Sender    common.PublicKey  // required if SenderAta is empty; The wallet to send tokens from
+	Recipient common.PublicKey  // required if RecipientAta is empty; The wallet to send tokens to
+	Mint      common.PublicKey  // required; The token mint to send
+	Amount    uint64            // required; The amount of tokens to send (in token minimal units)
+	Reference *common.PublicKey // optional; public key to use as a reference for the transaction.
 }
 
 // Validate validates the parameters.
@@ -30,6 +31,9 @@ func (p TransferTokenParam) Validate() error {
 	}
 	if p.Recipient == (common.PublicKey{}) {
 		return fmt.Errorf("missed or invalid recipient public key")
+	}
+	if p.Reference != nil && *p.Reference == (common.PublicKey{}) {
+		return fmt.Errorf("invalid reference public key")
 	}
 	return nil
 }
@@ -54,13 +58,21 @@ func TransferToken(params TransferTokenParam) InstructionFunc {
 			return nil, fmt.Errorf("failed to find associated token address for recipient wallet: %w", err)
 		}
 
-		return []types.Instruction{
-			token.Transfer(token.TransferParam{
-				From:   senderAta,
-				To:     recipientAta,
-				Auth:   params.Sender,
-				Amount: params.Amount,
-			}),
-		}, nil
+		instruction := token.Transfer(token.TransferParam{
+			From:   senderAta,
+			To:     recipientAta,
+			Auth:   params.Sender,
+			Amount: params.Amount,
+		})
+
+		if params.Reference != nil {
+			instruction.Accounts = append(instruction.Accounts, types.AccountMeta{
+				PubKey:     *params.Reference,
+				IsSigner:   false,
+				IsWritable: false,
+			})
+		}
+
+		return []types.Instruction{instruction}, nil
 	}
 }
