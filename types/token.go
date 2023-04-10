@@ -7,7 +7,7 @@ import (
 
 	"github.com/dmitrymomot/solana/utils"
 	"github.com/portto/solana-go-sdk/common"
-	"github.com/portto/solana-go-sdk/program/token"
+	// "github.com/portto/solana-go-sdk/program/token"
 )
 
 const (
@@ -174,11 +174,11 @@ const (
 )
 
 // TokenAccountStateMap is a map of token account states.
-var tokenAccountStates = map[token.TokenAccountState]TokenAccountState{
-	token.TokenAccountStateUninitialized: TokenAccountStateUninitialized,
-	token.TokenAccountStateInitialized:   TokenAccountStateInitialized,
-	token.TokenAccountFrozen:             TokenAccountFrozen,
-}
+// var tokenAccountStates = map[token.TokenAccountState]TokenAccountState{
+// 	token.TokenAccountStateUninitialized: TokenAccountStateUninitialized,
+// 	token.TokenAccountStateInitialized:   TokenAccountStateInitialized,
+// 	token.TokenAccountFrozen:             TokenAccountFrozen,
+// }
 
 // NewTokenAccount converts the given json encoded data to a token account.
 func NewTokenAccount(data []byte) (TokenAccount, error) {
