@@ -170,7 +170,7 @@ func (c *Client) SignTransaction(ctx context.Context, wallet sdktypes.Account, t
 // Send transaction
 // returns the transaction hash or an error
 func (c *Client) SendTransaction(ctx context.Context, txSource string, i ...uint8) (string, error) {
-	var tryN uint8 = 1
+	var tryN uint8 = 0
 	if len(i) > 0 {
 		tryN = i[0]
 	}
