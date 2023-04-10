@@ -8,8 +8,10 @@ import (
 
 	"github.com/dmitrymomot/solana/types"
 	"github.com/dmitrymomot/solana/utils"
+	"github.com/portto/solana-go-sdk/client"
 	"github.com/portto/solana-go-sdk/common"
 	"github.com/portto/solana-go-sdk/program/system"
+	"github.com/portto/solana-go-sdk/rpc"
 	sdktypes "github.com/portto/solana-go-sdk/types"
 )
 
@@ -44,7 +46,7 @@ func (c *Client) NewTransaction(ctx context.Context, params NewTransactionParams
 		return "", utils.StackErrors(ErrNewTransaction, err)
 	}
 
-	txb, err := tx.Serialize()
+	txb, err := utils.EncodeTransaction(tx)
 	if err != nil {
 		return "", utils.StackErrors(
 			ErrNewTransaction,
@@ -53,7 +55,7 @@ func (c *Client) NewTransaction(ctx context.Context, params NewTransactionParams
 		)
 	}
 
-	return utils.BytesToBase64(txb), nil
+	return txb, nil
 }
 
 // NewDurableTransactionParams are the parameters for NewDurableTransaction function.
@@ -112,7 +114,7 @@ func (c *Client) NewDurableTransaction(ctx context.Context, params NewDurableTra
 		)
 	}
 
-	txb, err := tx.Serialize()
+	txb, err := utils.EncodeTransaction(tx)
 	if err != nil {
 		return "", utils.StackErrors(
 			ErrNewDurableTransaction,
@@ -121,18 +123,13 @@ func (c *Client) NewDurableTransaction(ctx context.Context, params NewDurableTra
 		)
 	}
 
-	return utils.BytesToBase64(txb), nil
+	return txb, nil
 }
 
 // GetTransactionFee gets the fee for a transaction.
 // Returns the fee or error.
 func (c *Client) GetTransactionFee(ctx context.Context, txSource string) (uint64, error) {
-	txb, err := utils.Base64ToBytes(txSource)
-	if err != nil {
-		return 0, utils.StackErrors(ErrGetTransactionFee, err)
-	}
-
-	tx, err := sdktypes.TransactionDeserialize(txb)
+	tx, err := utils.DecodeTransaction(txSource)
 	if err != nil {
 		return 0, utils.StackErrors(ErrGetTransactionFee, ErrDeserializeTransaction, err)
 	}
@@ -148,12 +145,7 @@ func (c *Client) GetTransactionFee(ctx context.Context, txSource string) (uint64
 // Sign transaction
 // returns the signed transaction or an error
 func (c *Client) SignTransaction(ctx context.Context, wallet sdktypes.Account, txSource string) (string, error) {
-	txb, err := utils.Base64ToBytes(txSource)
-	if err != nil {
-		return "", utils.StackErrors(ErrGetTransactionFee, err)
-	}
-
-	tx, err := sdktypes.TransactionDeserialize(txb)
+	tx, err := utils.DecodeTransaction(txSource)
 	if err != nil {
 		return "", utils.StackErrors(ErrSignTransaction, ErrDeserializeTransaction, err)
 	}
@@ -167,12 +159,12 @@ func (c *Client) SignTransaction(ctx context.Context, wallet sdktypes.Account, t
 		return "", utils.StackErrors(ErrSignTransaction, ErrAddSignature, err)
 	}
 
-	result, err := tx.Serialize()
+	result, err := utils.EncodeTransaction(tx)
 	if err != nil {
 		return "", utils.StackErrors(ErrSignTransaction, ErrSerializeTransaction, err)
 	}
 
-	return utils.BytesToBase64(result), nil
+	return result, nil
 }
 
 // Send transaction
@@ -183,12 +175,7 @@ func (c *Client) SendTransaction(ctx context.Context, txSource string, i ...uint
 		tryN = i[0]
 	}
 
-	txb, err := utils.Base64ToBytes(txSource)
-	if err != nil {
-		return "", utils.StackErrors(ErrGetTransactionFee, err)
-	}
-
-	tx, err := sdktypes.TransactionDeserialize(txb)
+	tx, err := utils.DecodeTransaction(txSource)
 	if err != nil {
 		return "", utils.StackErrors(ErrSendTransaction, ErrDeserializeTransaction, err)
 	}
@@ -275,4 +262,85 @@ func (c *Client) WaitForTransactionConfirmed(ctx context.Context, txhash string,
 			}
 		}
 	}
+}
+
+// GetOldestTransactionForWallet returns the oldest transaction by the given base58 encoded public key.
+// Returns the transaction or an error.
+func (c *Client) GetOldestTransactionForWallet(
+	ctx context.Context,
+	base58Addr string,
+	offsetTxSignature string,
+) (string, *client.Transaction, error) {
+	limit := 1000
+	result, err := c.rpcClient.GetSignaturesForAddressWithConfig(ctx, base58Addr, client.GetSignaturesForAddressConfig{
+		Limit:      limit,
+		Before:     offsetTxSignature,
+		Commitment: rpc.CommitmentFinalized,
+	})
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get signatures for address: %s: %w", base58Addr, err)
+	}
+
+	if l := len(result); l == 0 {
+		return "", nil, ErrNoTransactionsFound
+	} else if l < limit {
+		tx := result[l-1]
+		if tx.Err != nil {
+			return "", nil, fmt.Errorf("transaction failed: %v", tx.Err)
+		}
+		if tx.Signature == "" {
+			return "", nil, ErrNoTransactionsFound
+		}
+		if tx.BlockTime == nil || *tx.BlockTime == 0 || *tx.BlockTime > time.Now().Unix() {
+			return "", nil, ErrTransactionNotConfirmed
+		}
+
+		resp, err := c.GetTransaction(ctx, tx.Signature)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to get oldest transaction for wallet: %s: %w", base58Addr, err)
+		}
+
+		return tx.Signature, resp, nil
+	}
+
+	return c.GetOldestTransactionForWallet(ctx, base58Addr, result[limit-1].Signature)
+}
+
+// GetTransaction returns the transaction by the given base58 encoded transaction signature.
+// Returns the transaction or an error.
+func (c *Client) GetTransaction(ctx context.Context, txSignature string) (*client.Transaction, error) {
+	tx, err := c.rpcClient.GetTransaction(ctx, txSignature)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get transaction: %w", err)
+	}
+	if tx == nil || tx.Meta == nil {
+		return nil, ErrTransactionNotFound
+	}
+	if tx.Meta.Err != nil {
+		return nil, fmt.Errorf("transaction failed: %v", tx.Meta.Err)
+	}
+
+	return tx, nil
+}
+
+// ValidateTransactionByReference returns the transaction by the given reference.
+// Returns transaction signature or an error if the transaction is not found or the transaction failed.
+func (c *Client) ValidateTransactionByReference(ctx context.Context, reference, destination string, amount uint64, mint string) (string, error) {
+	txSign, tx, err := c.GetOldestTransactionForWallet(ctx, reference, "")
+	if err != nil {
+		return "", fmt.Errorf("failed to validate transaction for reference %s: %w", reference, err)
+	}
+
+	if mint == "" || mint == "SOL" || mint == "So11111111111111111111111111111111111111112" {
+		if err := CheckSolTransferTransaction(tx.Meta, tx.Transaction, destination, amount); err != nil {
+			return "", fmt.Errorf("failed to validate transaction for reference %s: %w", reference, err)
+		}
+		return txSign, nil
+	}
+
+	if err := CheckTokenTransferTransaction(tx.Meta, tx.Transaction, mint, destination, amount); err != nil {
+		return "", fmt.Errorf("failed to validate transaction for reference %s: %w", reference, err)
+	}
+
+	return txSign, nil
 }

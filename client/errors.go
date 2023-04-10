@@ -50,4 +50,7 @@ var (
 	ErrTokenIsNotMasterEdition             = errors.New("token is not master edition")
 	ErrGetMasterEditionCurrentSupply       = errors.New("failed to get master edition current supply")
 	ErrNewDurableTransaction               = errors.New("failed to create new durable transaction")
+	ErrNoTransactionsFound                 = errors.New("no transactions found")
+	ErrTransactionNotFound                 = errors.New("transaction not found")
+	ErrTransactionNotConfirmed             = errors.New("transaction not confirmed yet")
 )
