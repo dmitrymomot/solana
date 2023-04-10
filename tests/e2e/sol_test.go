@@ -68,7 +68,7 @@ func TestTransaction(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, typesx.TransactionStatusSuccess, status)
 
-		startSenderBalance, err := sc.GetSOLBalance(ctx, senderAccount.PublicKey.ToBase58())
+		startSenderBalance, err = sc.GetSOLBalance(ctx, senderAccount.PublicKey.ToBase58())
 		require.NoError(t, err)
 		assert.Greater(t, startSenderBalance, amount+minAccountRent)
 		t.Logf("Start sender balance: %d", startSenderBalance)
