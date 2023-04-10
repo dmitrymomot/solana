@@ -4,12 +4,15 @@ go 1.19
 
 require (
 	filippo.io/edwards25519 v1.0.0
+	github.com/dmitrymomot/go-env v1.0.2
 	github.com/everFinance/goar v1.5.2
 	github.com/fatih/color v1.15.0
 	github.com/google/uuid v1.3.0
+	github.com/joho/godotenv v1.5.1
 	github.com/mr-tron/base58 v1.2.0
 	github.com/near/borsh-go v0.3.2-0.20220516180422-1ff87d108454
-	github.com/portto/solana-go-sdk v1.23.1
+	github.com/pkg/errors v0.9.1
+	github.com/portto/solana-go-sdk v1.23.6
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.2
 	github.com/tyler-smith/go-bip39 v1.1.0
