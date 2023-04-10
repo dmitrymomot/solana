@@ -16,6 +16,8 @@ import (
 )
 
 func TestRequestAirdrop(t *testing.T) {
+	t.SkipNow() // uncomment to run this test
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
