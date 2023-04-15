@@ -36,10 +36,14 @@ func DeserializeMetadata(data []byte) (*Metadata, error) {
 		Mint:                 md.Mint.ToBase58(),
 		PrimarySaleHappened:  md.PrimarySaleHappened,
 		IsMutable:            md.IsMutable,
-		TokenStandard:        CastToTokenStandard(*md.TokenStandard).String(),
+		TokenStandard:        "unknown",
 		MetadataUri:          md.Data.Uri,
 		SellerFeeBasisPoints: md.Data.SellerFeeBasisPoints,
 		Data:                 &metadata.Metadata{},
+	}
+
+	if md.TokenStandard != nil {
+		m.TokenStandard = CastToTokenStandard(*md.TokenStandard).String()
 	}
 
 	if md.Data.Uri != "" {
