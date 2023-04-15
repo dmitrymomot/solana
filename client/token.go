@@ -106,6 +106,12 @@ func (c *Client) GetTokenMetadata(ctx context.Context, base58MintAddr string) (*
 
 	// utils.PrettyPrint(metadataAccountInfo)
 
+	if metadataAccountInfo.Data == nil {
+		return nil, utils.StackErrors(
+			ErrGetTokenMetadata,
+			errors.New("no metadata found"),
+		)
+	}
 	metadata, err := token_metadata.DeserializeMetadata(metadataAccountInfo.Data)
 	if err != nil {
 		return nil, utils.StackErrors(ErrGetTokenMetadata, err)
