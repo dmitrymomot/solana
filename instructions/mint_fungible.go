@@ -120,7 +120,7 @@ func MintFungible(params MintFungibleParam) InstructionFunc {
 				MintAuth:   params.MintTo,
 				FreezeAuth: utils.Pointer(params.MintTo),
 			}),
-			metaplex_token_metadata.CreateMetadataAccountV2(metaplex_token_metadata.CreateMetadataAccountV2Param{
+			metaplex_token_metadata.CreateMetadataAccountV3(metaplex_token_metadata.CreateMetadataAccountV3Param{
 				Metadata:                metaPubkey,
 				Mint:                    params.Mint,
 				MintAuthority:           params.MintTo,

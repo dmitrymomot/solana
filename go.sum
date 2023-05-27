@@ -47,8 +47,8 @@ github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0/go.mod h1:DZGJHZMqrU4JJqFAWUS2U
 github.com/decred/dcrd/lru v1.0.0/go.mod h1:mxKOwFd7lFjN2GZYsiz/ecgqR6kkYAl+0pz0tEMk218=
 github.com/dmitrymomot/go-env v1.0.2 h1:lTqpscGNU5Bgx98JmTgz3R3fYghQzOT0NhqU6j4yuhY=
 github.com/dmitrymomot/go-env v1.0.2/go.mod h1:Xc3/tGc5j+0ggXOy+aWNSayu8LGDcFc+Ueu+btpao2Y=
-github.com/dmitrymomot/solana-go-sdk v1.23.7 h1:wrmpei/M9zqVMYF5lk4Q8bJB/l85LaQOjzkZ7DjJgho=
-github.com/dmitrymomot/solana-go-sdk v1.23.7/go.mod h1:bRVxXrJRiH7oVsOOXkme7PVAPQ1+10NISsfnErOhpYU=
+github.com/dmitrymomot/solana-go-sdk v1.23.8 h1:jgwQLgQGhS64sUfW03SdcSIU2Jme6D09TdWo9GLI1Qw=
+github.com/dmitrymomot/solana-go-sdk v1.23.8/go.mod h1:jq7j+cMzlvWxdmdJytYd9EwRtnMjDHvsenTzGQE7lh8=
 github.com/ethereum/go-ethereum v1.11.5 h1:3M1uan+LAUvdn+7wCEFrcMM4LJTeuxDrPTg/f31a5QQ=
 github.com/ethereum/go-ethereum v1.11.5/go.mod h1:it7x0DWnTDMfVFdXcU6Ti4KEFQynLHVRarcSlPr0HBo=
 github.com/everFinance/arseeding v1.0.31 h1:eCftHm0k39fYa6NIDanDEd2b/6ryWIZn/RNf4v5jMI4=
@@ -188,8 +188,8 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
-github.com/stretchr/testify v1.8.2 h1:+h33VjcLVPDHtOdpUCuF+7gSuG3yGIftsP1YvFihtJ8=
-github.com/stretchr/testify v1.8.2/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
+github.com/stretchr/testify v1.8.3 h1:RP3t2pwF7cMEbC1dqtB6poj3niw/9gnV4Cjg5oW5gtY=
+github.com/stretchr/testify v1.8.3/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 h1:epCh84lMvA70Z7CTTCmYQn2CKbY8j86K7/FAIr141uY=
 github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7/go.mod h1:q4W45IWZaF22tdD+VEXcAWRA037jwmWEB5VWYORlTpc=
 github.com/tidwall/gjson v1.6.3/go.mod h1:BaHyNc5bjzYkPqgLq7mdVzeiRtULKULXLgZFKsxEHI0=
