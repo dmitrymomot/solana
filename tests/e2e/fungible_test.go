@@ -470,3 +470,181 @@ func TestFreezeTokenAccount(t *testing.T) {
 		})
 	})
 }
+
+func TestDisableMintingOfFungibleToken(t *testing.T) {
+	var (
+		tokenName    = "Test Token"
+		tokenSymbol  = "TSTt"
+		metadataUri  = "https://www.arweave.net/QR1PsBgIbiYoKgGff5Jq2U8QavHChRjBki8XRJ-06mI?ext=json"
+		supplyAmount = 1000000 * types.SPLTokenDefaultMultiplier
+		mint         = common.NewAccount()
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create a new sc
+	sc := client.New(client.SetSolanaEndpoint(e2e.SolanaDevnetRPCNode))
+
+	t.Run("mint fungible token", func(t *testing.T) {
+		// Mint token
+		t.Run("mint token", func(t *testing.T) {
+			tx, err := transaction.NewTransactionBuilder(sc).
+				SetFeePayer(e2e.FeePayerPubkey).
+				AddSigner(mint).
+				AddInstruction(instructions.MintFungible(instructions.MintFungibleParam{
+					Mint:     mint.PublicKey,
+					MintTo:   e2e.Wallet1Pubkey,
+					FeePayer: &e2e.FeePayerPubkey,
+					Decimals: types.SPLTokenDefaultDecimals,
+					// SupplyAmount:  supplyAmount, // no minting, just create token
+					IsFixedSupply: false, // Minting is not fixed supply
+					TokenName:     tokenName,
+					TokenSymbol:   tokenSymbol,
+					MetadataURI:   metadataUri,
+				})).
+				Build(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, tx)
+
+			txHash, txStatus, err := e2e.SignAndSendTransaction(ctx, sc, tx, e2e.FeePayerPrivateKey, e2e.Wallet1PrivateKey)
+			require.NoError(t, err)
+			fmt.Println("tx:", txHash, "status:", txStatus)
+			require.NotEmpty(t, txHash)
+			require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+		})
+
+		// Check token balance
+		t.Run("check token balance", func(t *testing.T) {
+			_, err := sc.GetTokenBalance(ctx, e2e.Wallet1Pubkey.ToBase58(), mint.PublicKey.ToBase58())
+			require.Error(t, err)
+		})
+
+		// Check token metadata
+		t.Run("check token metadata", func(t *testing.T) {
+			metadata, err := sc.GetTokenMetadata(ctx, mint.PublicKey.ToBase58())
+			require.NoError(t, err)
+			require.EqualValues(t, tokenName, metadata.Data.Name)
+			require.EqualValues(t, tokenSymbol, metadata.Data.Symbol)
+			require.EqualValues(t, token_metadata.TokenStandardFungible, metadata.TokenStandard)
+		})
+	})
+
+	t.Run("mint existed fungible token", func(t *testing.T) {
+		// Mint token
+		t.Run("mint token", func(t *testing.T) {
+			tx, err := transaction.NewTransactionBuilder(sc).
+				SetFeePayer(e2e.FeePayerPubkey).
+				AddInstruction(instructions.CreateAssociatedTokenAccountIfNotExists(
+					instructions.CreateAssociatedTokenAccountParam{
+						Funder: e2e.FeePayerPubkey,
+						Owner:  e2e.Wallet1Pubkey,
+						Mint:   mint.PublicKey,
+					},
+				)).
+				AddInstruction(instructions.MintExistedFungible(instructions.MintExistedFungibleParam{
+					Mint:         mint.PublicKey,
+					MintTo:       e2e.Wallet1Pubkey,
+					FeePayer:     &e2e.FeePayerPubkey,
+					SupplyAmount: supplyAmount,
+				})).
+				Build(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, tx)
+
+			txHash, txStatus, err := e2e.SignAndSendTransaction(ctx, sc, tx, e2e.FeePayerPrivateKey, e2e.Wallet1PrivateKey)
+			require.NoError(t, err)
+			fmt.Println("tx:", txHash, "status:", txStatus)
+			require.NotEmpty(t, txHash)
+			require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+		})
+
+		// Check token balance
+		t.Run("check token balance", func(t *testing.T) {
+			balance, err := sc.GetTokenBalance(ctx, e2e.Wallet1Pubkey.ToBase58(), mint.PublicKey.ToBase58())
+			require.NoError(t, err)
+			require.EqualValues(t, supplyAmount, balance.Amount)
+			require.EqualValues(t, types.SPLTokenDefaultDecimals, balance.Decimals)
+		})
+	})
+
+	t.Run("freeze minting of fungible token", func(t *testing.T) {
+		// Freeze minting
+		t.Run("freeze minting", func(t *testing.T) {
+			tx, err := transaction.NewTransactionBuilder(sc).
+				SetFeePayer(e2e.FeePayerPubkey).
+				AddInstruction(instructions.DisableFungibleTokenMinting(instructions.DisableFungibleTokenMintingParam{
+					Mint:     mint.PublicKey,
+					MintAuth: e2e.Wallet1Pubkey,
+					FeePayer: &e2e.FeePayerPubkey,
+				})).
+				Build(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, tx)
+
+			txHash, txStatus, err := e2e.SignAndSendTransaction(ctx, sc, tx, e2e.FeePayerPrivateKey, e2e.Wallet1PrivateKey)
+			require.NoError(t, err)
+			fmt.Println("tx:", txHash, "status:", txStatus)
+			require.NotEmpty(t, txHash)
+			require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+		})
+
+		// Mint token
+		t.Run("mint token after freeze minting", func(t *testing.T) {
+			tx, err := transaction.NewTransactionBuilder(sc).
+				SetFeePayer(e2e.FeePayerPubkey).
+				AddInstruction(instructions.MintExistedFungible(instructions.MintExistedFungibleParam{
+					Mint:         mint.PublicKey,
+					MintTo:       e2e.Wallet1Pubkey,
+					FeePayer:     &e2e.FeePayerPubkey,
+					SupplyAmount: supplyAmount,
+				})).
+				Build(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, tx)
+
+			_, _, err = e2e.SignAndSendTransaction(ctx, sc, tx, e2e.FeePayerPrivateKey, e2e.Wallet1PrivateKey)
+			require.Error(t, err)
+		})
+	})
+
+	// Burn token
+	t.Run("burn fungible token and close token account", func(t *testing.T) {
+		// Burn token and close token account
+		tx, err := transaction.NewTransactionBuilder(sc).
+			SetFeePayer(e2e.FeePayerPubkey).
+			AddInstruction(instructions.BurnToken(instructions.BurnTokenParams{
+				Mint:              mint.PublicKey,
+				Amount:            supplyAmount,
+				TokenAccountOwner: e2e.Wallet1Pubkey,
+			})).
+			AddInstruction(instructions.CloseTokenAccount(instructions.CloseTokenAccountParams{
+				Owner:    e2e.Wallet1Pubkey,
+				Mint:     &mint.PublicKey,
+				FeePayer: &e2e.FeePayerPubkey,
+			})).
+			Build(ctx)
+		require.NoError(t, err)
+		require.NotEmpty(t, tx)
+
+		txHash, txStatus, err := e2e.SignAndSendTransaction(ctx, sc, tx, e2e.FeePayerPrivateKey, e2e.Wallet1PrivateKey)
+		require.NoError(t, err)
+		fmt.Println("tx:", txHash, "status:", txStatus)
+		require.NotEmpty(t, txHash)
+		require.EqualValues(t, txStatus, types.TransactionStatusSuccess)
+
+		// Check token balance of wallet 1
+		t.Run("check token balance", func(t *testing.T) {
+			_, err := sc.GetTokenBalance(ctx, e2e.Wallet1Pubkey.ToBase58(), mint.PublicKey.ToBase58())
+			require.Error(t, err)
+		})
+
+		t.Run("check token account info", func(t *testing.T) {
+			ata, err := common.DeriveTokenAccount(e2e.Wallet1Pubkey.ToBase58(), mint.PublicKey.ToBase58())
+			require.NoError(t, err)
+			ataInfo, err := sc.GetTokenAccountInfo(ctx, ata.ToBase58())
+			require.Error(t, err)
+			require.EqualValues(t, ataInfo, token.TokenAccount{})
+		})
+	})
+}

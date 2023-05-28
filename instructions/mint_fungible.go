@@ -172,3 +172,94 @@ func MintFungible(params MintFungibleParam) InstructionFunc {
 		return instructions, nil
 	}
 }
+
+// MintExistedFungibleParam is a parameter for MintExistedFungible.
+type MintExistedFungibleParam struct {
+	Mint         common.PublicKey  // required; The token mint public key
+	MintTo       common.PublicKey  // required; The wallet to mint tokens to
+	FeePayer     *common.PublicKey // optional; The wallet to pay the fees from; default is MintTo
+	SupplyAmount uint64            // required; The init supply of the token (in token minimal units), e.g: if you want to mint 10 tokens and decimals=9, amount=10*1e9/amount=10000000000; default is 0, then no tokens will be minted
+}
+
+// Validate validates the parameter.
+func (p MintExistedFungibleParam) Validate() error {
+	if p.Mint == (common.PublicKey{}) {
+		return fmt.Errorf("mint is required")
+	}
+	if p.MintTo == (common.PublicKey{}) {
+		return fmt.Errorf("mint to is required")
+	}
+	if p.FeePayer != nil && *p.FeePayer == (common.PublicKey{}) {
+		return fmt.Errorf("fee payer public key is invalid")
+	}
+	if p.SupplyAmount == 0 {
+		return fmt.Errorf("supply amount is required")
+	}
+	return nil
+}
+
+// Mint existed fingible token.
+// The token mint account must be created before calling this function.
+// If the token is fixed supply, this instruction will fail.
+func MintExistedFungible(params MintExistedFungibleParam) InstructionFunc {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
+		if params.FeePayer == nil {
+			params.FeePayer = &params.MintTo
+		}
+		ownerAta, _, err := common.FindAssociatedTokenAddress(params.MintTo, params.Mint)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find associated token address: %w", err)
+		}
+		instructions := []types.Instruction{
+			token.MintTo(token.MintToParam{
+				Mint:    params.Mint,
+				Auth:    params.MintTo,
+				Signers: []common.PublicKey{},
+				To:      ownerAta,
+				Amount:  params.SupplyAmount,
+			}),
+		}
+		return instructions, nil
+	}
+}
+
+// DisableFungibleTokenMintingParam is a parameter for DisableFungibleTokenMinting.
+type DisableFungibleTokenMintingParam struct {
+	Mint     common.PublicKey  // required; The token mint public key
+	MintAuth common.PublicKey  // required; The mint authority
+	FeePayer *common.PublicKey // optional; The wallet to pay the fees from; default is MintAuth
+}
+
+// Validate validates the parameter.
+func (p DisableFungibleTokenMintingParam) Validate() error {
+	if p.Mint == (common.PublicKey{}) {
+		return fmt.Errorf("mint is required")
+	}
+	if p.MintAuth == (common.PublicKey{}) {
+		return fmt.Errorf("mint auth is required")
+	}
+	if p.FeePayer != nil && *p.FeePayer == (common.PublicKey{}) {
+		return fmt.Errorf("fee payer public key is invalid")
+	}
+	return nil
+}
+
+// DisableFungibleTokenMinting freezes the token mint.
+// After freezing, no more tokens can be minted.
+func DisableFungibleTokenMinting(params DisableFungibleTokenMintingParam) InstructionFunc {
+	return func(ctx context.Context, c Client) ([]types.Instruction, error) {
+		if params.FeePayer == nil {
+			params.FeePayer = &params.MintAuth
+		}
+		instructions := []types.Instruction{
+			token.SetAuthority(token.SetAuthorityParam{
+				Account:  params.Mint,
+				AuthType: token.AuthorityTypeMintTokens,
+				Auth:     params.MintAuth,
+				NewAuth:  nil,
+				Signers:  []common.PublicKey{},
+			}),
+		}
+		return instructions, nil
+	}
+}
